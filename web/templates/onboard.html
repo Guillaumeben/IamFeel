@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Onboarding</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <p style="color: #666; margin-top: 0.5rem;">Welcome! Let's set up your training profile</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Complete Your Profile</h2>
+            <p>Welcome, <strong>{{.User.Name}}</strong>! To get started with personalized training plans, please complete your profile setup.</p>
+        </div>
+
+        {{if .Error}}
+        <div class="error-message">
+            <p>{{.Error}}</p>
+        </div>
+        {{end}}
+
+        <form action="/onboard" method="POST" class="settings-form">
+            <!-- Sport Selection -->
+            <div class="settings-section">
+                <h3>Sport & Training Focus</h3>
+                <p class="section-description">Select your primary sport and training goals.</p>
+
+                <div class="form-group">
+                    <label for="sport">Primary Sport *</label>
+                    <select id="sport" name="sport" required>
+                        <option value="">Select sport...</option>
+                        <option value="boxing">Boxing</option>
+                        <option value="muay_thai">Muay Thai</option>
+                        <option value="mma">MMA</option>
+                        <option value="kickboxing">Kickboxing</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="primary_goal">Primary Goal *</label>
+                    <select id="primary_goal" name="primary_goal" required>
+                        <option value="">Select goal...</option>
+                        <option value="fitness">General Fitness</option>
+                        <option value="competition">Competition Preparation</option>
+                        <option value="technique">Technique Improvement</option>
+                        <option value="weight_loss">Weight Loss</option>
+                        <option value="strength">Strength & Conditioning</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Training Preferences -->
+            <div class="settings-section">
+                <h3>Training Preferences</h3>
+                <p class="section-description">Set your training frequency and session length preferences.</p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sessions_per_week">Sessions Per Week *</label>
+                        <input type="number" id="sessions_per_week" name="sessions_per_week" min="1" max="7" value="3" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="session_duration">Session Duration (minutes) *</label>
+                        <input type="number" id="session_duration" name="session_duration" min="15" max="180" value="60" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment & Location -->
+            <div class="settings-section">
+                <h3>Equipment & Location</h3>
+                <p class="section-description">Tell us about your training setup.</p>
+
+                <div class="form-group">
+                    <label for="training_location">Primary Training Location *</label>
+                    <select id="training_location" name="training_location" required>
+                        <option value="">Select location...</option>
+                        <option value="home">Home</option>
+                        <option value="gym">Gym</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Available Equipment (optional)</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="heavy_bag"> Heavy Bag
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="speed_bag"> Speed Bag
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="jump_rope"> Jump Rope
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="weights"> Weights
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="kettlebells"> Kettlebells
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" name="equipment" value="resistance_bands"> Resistance Bands
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="settings-section">
+                <h3>Weekly Availability</h3>
+                <p class="section-description">Select the days you're available to train.</p>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Monday" checked> Monday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Tuesday" checked> Tuesday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Wednesday" checked> Wednesday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Thursday" checked> Thursday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Friday" checked> Friday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Saturday" checked> Saturday
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" name="availability" value="Sunday" checked> Sunday
+                    </label>
+                </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="settings-section">
+                <h3>Additional Information (Optional)</h3>
+
+                <div class="form-group">
+                    <label for="training_notes">Training Notes</label>
+                    <textarea id="training_notes" name="training_notes" rows="3" placeholder="Any injuries, limitations, or specific focus areas..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Complete Setup</button>
+            </div>
+        </form>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+</body>
+</html>

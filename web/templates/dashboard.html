@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <nav>
+                <a href="/" class="active">Dashboard</a>
+                <a href="/history">History</a>
+                <a href="/users">Users</a>
+                <a href="/settings">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="welcome">
+            <h2>Welcome back, {{.UserName}}!</h2>
+            <p class="week-info">Week of {{.CurrentWeek}}</p>
+            <div class="current-datetime">
+                <span class="datetime-icon">📅</span>
+                <span class="datetime-text">{{.CurrentDateTime}}</span>
+            </div>
+        </div>
+
+        {{if .Plan}}
+        <section class="plan-section">
+            <div class="section-header">
+                <h3>📋 This Week's Training Plan</h3>
+                <div>
+                    <a href="/plan/modify" class="btn btn-primary">Modify a Day</a>
+                    <a href="/plan/current" class="btn btn-secondary" target="_blank">View Full Plan</a>
+                </div>
+            </div>
+
+            {{if .Plan.Rationale}}
+            <div class="rationale">
+                <h4>This Week's Focus</h4>
+                <p>{{.Plan.Rationale}}</p>
+            </div>
+            {{end}}
+        </section>
+        {{else}}
+        <section class="no-plan">
+            <div class="empty-state">
+                <h3>No plan for this week</h3>
+                <p>Generate your weekly training plan using the CLI:</p>
+                <code>iamfeel plan</code>
+            </div>
+        </section>
+        {{end}}
+
+        {{if .AIRecommendations}}
+        <!-- AI Coach Recommendations
+             Future implementation: Generate personalized recommendations based on:
+             - User goals (short-term, medium-term, long-term)
+             - Current supplements and nutrition
+             - Recent workout performance (weights lifted, perceived effort)
+             - Performance notes from completed sessions
+             - Skip reasons and patterns
+             - Recovery status and fatigue indicators
+             - Phase progression and periodization
+        -->
+        <section class="ai-recommendations">
+            <h3>🤖 AI Coach Recommendations</h3>
+            <div class="recommendations-content">
+                <p>{{.AIRecommendations}}</p>
+            </div>
+        </section>
+        {{end}}
+
+        {{if .PlannedSessions}}
+        <section class="planned-sessions">
+            <h3>📅 Planned Workouts</h3>
+            <div class="planned-list">
+                {{range .PlannedSessions}}
+                <div class="planned-card {{if .Completed}}completed{{else if .Skipped}}skipped{{end}}">
+                    <div class="planned-header">
+                        <div>
+                            <h4>{{.SessionType}}</h4>
+                            <span class="planned-date">{{.SessionDate.Format "Monday, Jan 2"}}</span>
+                        </div>
+                        <div class="planned-meta">
+                            {{if .DurationMinutes}}<span>⏱️ {{.DurationMinutes}} min</span>{{end}}
+                        </div>
+                    </div>
+                    {{if .Notes}}
+                    <div class="planned-notes">{{.Notes}}</div>
+                    {{end}}
+
+                    {{if .Completed}}
+                    <div class="status-badge completed-badge">✓ Completed</div>
+                    {{if .PerformanceNotes}}
+                    <div class="performance-notes">
+                        <strong>Performance:</strong> {{.PerformanceNotes}}
+                    </div>
+                    {{end}}
+                    {{else if .Skipped}}
+                    <div class="status-badge skipped-badge">⊘ Skipped</div>
+                    <div class="skip-reason">
+                        <strong>Reason:</strong> {{.SkipReason}}
+                    </div>
+                    {{else}}
+                    <div class="planned-actions">
+                        <button onclick="showCompleteModal({{.ID}}, '{{.SessionType}}', {{.DurationMinutes}})" class="btn btn-primary btn-sm">Mark Complete</button>
+                        <button onclick="showSkipModal({{.ID}}, '{{.SessionType}}')" class="btn btn-secondary btn-sm">Skip</button>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+
+        <section class="log-session">
+            <h3>📝 Log Additional Session</h3>
+            <form action="/sessions/log" method="POST" class="session-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="session_date">Date</label>
+                        <input type="date" id="session_date" name="session_date" value="{{.TodayDate}}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="session_type">Session Type</label>
+                        <input type="text" id="session_type" name="session_type" placeholder="e.g., Bag Work, Sparring" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="duration_minutes">Duration (minutes)</label>
+                        <input type="number" id="duration_minutes" name="duration_minutes" min="1" value="60" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="perceived_effort">Effort (1-10)</label>
+                        <input type="number" id="perceived_effort" name="perceived_effort" min="1" max="10" value="7" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes (optional)</label>
+                    <textarea id="notes" name="notes" rows="3" placeholder="How did it feel? Any insights?"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Log Session</button>
+            </form>
+        </section>
+
+        {{if .Sessions}}
+        <section class="recent-sessions">
+            <h3>🏋️ This Week's Sessions</h3>
+            <div class="sessions-list">
+                {{range .Sessions}}
+                <div class="session-card">
+                    <div class="session-header">
+                        <span class="session-type">{{.SessionType}}</span>
+                        <span class="session-date">{{.SessionDate.Format "Mon, Jan 2"}}</span>
+                    </div>
+                    <div class="session-details">
+                        <span>⏱️ {{.DurationMinutes}} min</span>
+                        <span>💪 Effort: {{.PerceivedEffort}}/10</span>
+                    </div>
+                    {{if .Notes}}
+                    <div class="session-notes">{{.Notes}}</div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+
+        {{if .Supplements}}
+        <section class="supplements-section">
+            <h3>💊 Your Supplements</h3>
+            <div class="supplements-grid">
+                {{range .Supplements}}
+                <div class="supplement-card">
+                    <div class="supplement-name">{{.Name}}</div>
+                    <div class="supplement-details">
+                        <span class="supplement-dosage">{{.Dosage}}</span>
+                        <span class="supplement-timing">{{.Timing}}</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+
+    <!-- Complete Session Modal -->
+    <div id="completeModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeCompleteModal()">&times;</span>
+            <h3>Mark Session Complete</h3>
+            <p id="completeSessionName"></p>
+            <form id="completeForm" action="/sessions/complete" method="POST">
+                <input type="hidden" id="completeSessionId" name="session_id">
+
+                <div class="form-group">
+                    <label for="complete_duration">Actual Duration (minutes)</label>
+                    <input type="number" id="complete_duration" name="duration_minutes" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="complete_effort">Perceived Effort (1-10)</label>
+                    <input type="number" id="complete_effort" name="perceived_effort" min="1" max="10" value="7" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="complete_performance">Performance Notes</label>
+                    <textarea id="complete_performance" name="performance_notes" rows="3" placeholder="Weights used, reps, PBs, etc."></textarea>
+                    <small>Track specific performance metrics (e.g., "Squat: 3x5 @ 225lbs", "Bag work: 8 rounds, felt strong")</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="complete_notes">General Notes</label>
+                    <textarea id="complete_notes" name="notes" rows="2" placeholder="How did it feel overall?"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeCompleteModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Mark Complete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Skip Session Modal -->
+    <div id="skipModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeSkipModal()">&times;</span>
+            <h3>Skip Session</h3>
+            <p id="skipSessionName"></p>
+            <form id="skipForm" action="/sessions/skip" method="POST">
+                <input type="hidden" id="skipSessionId" name="session_id">
+
+                <div class="form-group">
+                    <label for="skip_reason">Why are you skipping this session?</label>
+                    <textarea id="skip_reason" name="skip_reason" rows="3" placeholder="e.g., 'Injured shoulder', 'Feeling fatigued', 'Schedule conflict'" required></textarea>
+                    <small>This helps the AI adjust future plans</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeSkipModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Skip Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showCompleteModal(sessionId, sessionType, duration) {
+            document.getElementById('completeSessionId').value = sessionId;
+            document.getElementById('completeSessionName').textContent = sessionType;
+            document.getElementById('complete_duration').value = duration || 60;
+            document.getElementById('completeModal').style.display = 'block';
+        }
+
+        function closeCompleteModal() {
+            document.getElementById('completeModal').style.display = 'none';
+        }
+
+        function showSkipModal(sessionId, sessionType) {
+            document.getElementById('skipSessionId').value = sessionId;
+            document.getElementById('skipSessionName').textContent = sessionType;
+            document.getElementById('skipModal').style.display = 'block';
+        }
+
+        function closeSkipModal() {
+            document.getElementById('skipModal').style.display = 'none';
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const completeModal = document.getElementById('completeModal');
+            const skipModal = document.getElementById('skipModal');
+            if (event.target == completeModal) {
+                closeCompleteModal();
+            }
+            if (event.target == skipModal) {
+                closeSkipModal();
+            }
+        }
+    </script>
+</body>
+</html>

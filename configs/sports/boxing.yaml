@@ -1,0 +1,331 @@
+# Boxing Training Configuration
+
+sport_name: "Boxing"
+sport_type: "combat"
+
+# Training Phases
+phases:
+  - name: "base_building"
+    display_name: "Base Building"
+    typical_duration_weeks: 6-8
+    focus: "Building aerobic base, fundamental technique, and work capacity"
+    priorities:
+      - "High volume, lower intensity"
+      - "Technical fundamentals (stance, footwork, basic combinations)"
+      - "Aerobic conditioning (roadwork, steady-state cardio)"
+      - "General strength and mobility"
+
+  - name: "strength"
+    display_name: "Strength Phase"
+    typical_duration_weeks: 4-6
+    focus: "Developing maximal strength and explosive power"
+    priorities:
+      - "Heavy compound lifts (deadlift, squat, bench, overhead press)"
+      - "Explosive movements (med ball throws, box jumps)"
+      - "Core strength and rotational power"
+      - "Lower boxing volume to allow recovery"
+
+  - name: "power_speed"
+    display_name: "Power & Speed Development"
+    typical_duration_weeks: 4-6
+    focus: "Converting strength into punching power and hand speed"
+    priorities:
+      - "Plyometric work"
+      - "Speed bag and double-end bag"
+      - "Fast combinations on heavy bag"
+      - "Sprint intervals and explosive conditioning"
+
+  - name: "technique"
+    display_name: "Technical Refinement"
+    typical_duration_weeks: 3-4
+    focus: "Sharpening skills, combinations, defensive work"
+    priorities:
+      - "Padwork with coach"
+      - "Mitt work focusing on accuracy and timing"
+      - "Defensive drills (slipping, rolling, blocking)"
+      - "Ring craft and footwork patterns"
+
+  - name: "fight_camp"
+    display_name: "Fight Camp"
+    typical_duration_weeks: 8-12
+    focus: "Specific preparation for upcoming bout"
+    priorities:
+      - "Sparring (controlled, then ramped up)"
+      - "Opponent-specific tactics"
+      - "Weight management if needed"
+      - "Peak conditioning and sharpness"
+
+  - name: "recovery"
+    display_name: "Active Recovery"
+    typical_duration_weeks: 1-2
+    focus: "Recovery after fight or hard training block"
+    priorities:
+      - "Light technical work only"
+      - "Address any minor injuries"
+      - "Mental reset"
+      - "Mobility and flexibility work"
+
+# Session Types
+session_types:
+  - id: "bag_work"
+    name: "Heavy Bag Work"
+    description: "Power punching, combinations, and conditioning on heavy bag"
+    typical_duration_minutes: 30-45
+    intensity: "medium-high"
+    primary_adaptation: "power, endurance"
+    recovery_impact: "medium"
+    equipment_needed: "heavy bag"
+
+  - id: "sparring"
+    name: "Sparring"
+    description: "Live boxing with partner, controlled to hard intensity"
+    typical_duration_minutes: 20-40
+    intensity: "high-very-high"
+    primary_adaptation: "skill, timing, mental"
+    recovery_impact: "very-high"
+    equipment_needed: "ring, sparring partners, protective gear"
+    notes: "Most demanding session, requires 2-3 days recovery"
+
+  - id: "padwork"
+    name: "Padwork/Mitts"
+    description: "Working combinations and techniques with coach on focus mitts"
+    typical_duration_minutes: 30-45
+    intensity: "medium"
+    primary_adaptation: "skill, accuracy, speed"
+    recovery_impact: "low-medium"
+    equipment_needed: "focus mitts, coach"
+
+  - id: "technical_drilling"
+    name: "Technical Drilling"
+    description: "Shadow boxing, footwork, defensive drills, technique refinement"
+    typical_duration_minutes: 30-60
+    intensity: "low-medium"
+    primary_adaptation: "skill, motor patterns"
+    recovery_impact: "low"
+    equipment_needed: "mirror, optional speed bag"
+
+  - id: "conditioning"
+    name: "Boxing Conditioning"
+    description: "Intervals, circuit training, bag rounds at high intensity"
+    typical_duration_minutes: 30-45
+    intensity: "high"
+    primary_adaptation: "anaerobic capacity, work capacity"
+    recovery_impact: "high"
+
+  - id: "roadwork"
+    name: "Roadwork"
+    description: "Running for aerobic base and mental toughness"
+    typical_duration_minutes: 30-60
+    intensity: "low-medium"
+    primary_adaptation: "aerobic base"
+    recovery_impact: "low-medium"
+    notes: "Traditional boxing conditioning, builds mental toughness"
+
+  - id: "strength_training"
+    name: "Strength Training"
+    description: "Weight training for boxing (compound lifts, explosive work)"
+    typical_duration_minutes: 60-75
+    intensity: "high"
+    primary_adaptation: "strength, power"
+    recovery_impact: "high"
+    equipment_needed: "gym access"
+    notes: "Focus on functional strength for boxing"
+
+  - id: "speed_work"
+    name: "Speed Work"
+    description: "Speed bag, double-end bag, hand speed drills"
+    typical_duration_minutes: 20-30
+    intensity: "medium"
+    primary_adaptation: "hand speed, timing, rhythm"
+    recovery_impact: "low"
+
+  - id: "active_recovery"
+    name: "Active Recovery"
+    description: "Light shadow boxing, stretching, mobility, light cardio"
+    typical_duration_minutes: 30-45
+    intensity: "very-low"
+    primary_adaptation: "recovery"
+    recovery_impact: "negative"
+
+  - id: "ringcraft"
+    name: "Ringcraft"
+    description: "Ring generalship, positioning, angles, distance control"
+    typical_duration_minutes: 45-60
+    intensity: "low-medium"
+    primary_adaptation: "ring IQ, tactics"
+    recovery_impact: "low"
+    notes: "Strategic aspects of boxing"
+
+  - id: "sweet_science"
+    name: "Sweet Science Class"
+    description: "Technical boxing fundamentals, defensive mastery"
+    typical_duration_minutes: 60
+    intensity: "low-medium"
+    primary_adaptation: "technique, defense"
+    recovery_impact: "low"
+
+# Club Session Types (from membership)
+club_sessions:
+  - name: "Bag Work Class"
+    session_type: "bag_work"
+    description: "Group class focused on heavy bag combinations"
+
+  - name: "Boxing Class"
+    session_type: "technical_drilling"
+    description: "General boxing skills and drills"
+
+  - name: "Ringcraft Class"
+    session_type: "ringcraft"
+    description: "Ring positioning and tactical work"
+
+  - name: "Sweet Science Class"
+    session_type: "sweet_science"
+    description: "Technical boxing with emphasis on defense"
+
+  - name: "Sparring Session"
+    session_type: "sparring"
+    description: "Supervised sparring (typically needs separate booking/fee)"
+    notes: "Limited availability, high intensity"
+
+# Equipment
+equipment:
+  - "Heavy bag"
+  - "Speed bag"
+  - "Jump rope"
+  - "Hand wraps and gloves"
+  - "Barbell, plates, dumbbells"
+  - "Pull-up bar"
+  - "Boxing ring (at gym)"
+  - "Sparring partners (at gym)"
+  - "Coaches for padwork (at gym)"
+
+# Typical Weekly Structure
+typical_weekly_structure:
+  beginner:
+    sessions_per_week: 4
+    rest_days: 3
+    notes: "Focus on learning fundamentals, building base fitness. 2-3 boxing sessions, 1 strength session"
+
+  intermediate:
+    sessions_per_week: 5
+    rest_days: 2
+    notes: "Increase boxing volume, add sparring gradually. 3-4 boxing sessions, 2 strength sessions"
+
+  advanced:
+    sessions_per_week: 8
+    rest_days: 1
+    notes: "High volume, multiple sessions per day possible, include regular sparring. 5-7 boxing sessions, 2-3 strength sessions"
+
+# Recovery Guidelines (in days)
+recovery_guidelines:
+  very_low_intensity: # shadow boxing, active recovery
+    rest_before_next_hard_session: 0
+    rest_before_same_type: 0
+
+  low_intensity: # technical drilling, light padwork
+    rest_before_next_hard_session: 0
+    rest_before_same_type: 1
+
+  medium_intensity: # bag work, roadwork, padwork
+    rest_before_next_hard_session: 1
+    rest_before_same_type: 1
+
+  high_intensity: # conditioning, heavy bag rounds, strength training
+    rest_before_next_hard_session: 1
+    rest_before_same_type: 2
+
+  very_high_intensity: # sparring, competition
+    rest_before_next_hard_session: 3
+    rest_before_same_type: 5
+    notes: "Sparring is most taxing, requires significant recovery (2-3 days before next hard session, 4-7 days before sparring again)"
+
+# Boxing-Specific Considerations
+considerations:
+  - "Hand and wrist health: wrap properly, ice after hard sessions"
+  - "Sparring fatigue is cumulative: limit to 1-2x per week max"
+  - "Balance offensive and defensive training"
+  - "Mental fatigue from sparring affects other training"
+  - "Weight class considerations if competing"
+  - "Headgear and mouthguard for all sparring"
+  - "Roadwork traditionally done early morning, fasted"
+  - "Don't schedule heavy lower body lifting before footwork-intensive sessions"
+
+# Nutrition Guidelines
+nutrition:
+  general_approach: |
+    Boxing requires both power and endurance. Focus on:
+    - Adequate protein for recovery (1.6-2.2g per kg bodyweight)
+    - Carbs timed around training for energy and recovery
+    - Hydration critical (sweating during training)
+    - Weight management if competing in specific weight class
+
+  key_supplements:
+    - "Creatine monohydrate: 5g daily for power and recovery"
+    - "Protein powder: convenient post-training protein"
+    - "Electrolytes: during/after intense sessions"
+    - "Fish oil/Omega-3: anti-inflammatory, brain health"
+    - "Vitamin D: if limited sun exposure"
+    - "Magnesium: recovery and sleep quality"
+
+  hydration_focus: |
+    Critical for boxing performance. Aim for:
+    - Clear/pale urine throughout day
+    - 500ml-1L during training sessions
+    - Electrolyte supplementation for sessions over 60 minutes
+    - If cutting weight, practice water loading/cutting safely
+
+  pre_training: "2-3 hours before: balanced meal with carbs and protein. 30-60 min before: light snack if needed (banana, toast). Avoid heavy meals within 2 hours of training."
+
+  post_training: "Within 30-60 min: protein shake or meal. Focus on protein (20-40g) and carbs for glycogen replenishment. Rehydrate with water and electrolytes."
+
+# Agent Instructions
+agent_context: |
+  When coaching boxing, remember:
+
+  TRAINING PRINCIPLES:
+  - Sparring is the most demanding session - limit frequency and ensure adequate recovery
+  - Technical work should be done fresh, not when fatigued
+  - Hand health is critical - monitor for overuse injuries
+  - Balance between offensive power and defensive skills
+  - Footwork and conditioning are the foundation
+
+  PERIODIZATION:
+  - Build aerobic base before adding high-intensity work
+  - Strength phase comes early in cycle, maintain later
+  - Increase sparring volume as fight/competition approaches
+  - Always include regular technical work regardless of phase
+  - Deload every 3-4 weeks (reduce volume by 40-50%)
+
+  COMMON MISTAKES:
+  - Over-sparring (leads to injuries and burnout)
+  - Neglecting roadwork/cardio base
+  - Too much heavy bag without technical work
+  - Not enough rest between hard sessions
+  - Ignoring hand/wrist pain
+
+  PROGRESSION:
+  - Master fundamentals before adding complexity
+  - Increase volume before intensity
+  - Add sparring gradually (light to moderate to hard)
+  - Build conditioning base before fight-specific work
+
+  INJURY PREVENTION:
+  - Proper hand wrapping always
+  - Progressive sparring intensity
+  - Adequate shoulder and rotator cuff work
+  - Address any hand/wrist issues immediately
+  - Don't train through sharp pain
+
+  SESSION SEQUENCING:
+  - Technical work early in week when fresh
+  - Sparring mid-week (allows recovery before weekend)
+  - Strength training on non-boxing days or after boxing
+  - Don't schedule heavy legs day before footwork-heavy boxing
+  - Active recovery after sparring days
+
+  MENTAL ASPECTS:
+  - Sparring anxiety is normal - manage with gradual exposure
+  - Build confidence through technical mastery
+  - Film and review sessions when possible
+  - Celebrate small technical improvements
+  - Mental toughness built through consistent hard work

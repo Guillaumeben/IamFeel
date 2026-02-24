@@ -1,0 +1,148 @@
+package api
+
+import (
+    "log"
+    "net/http"
+    "strconv"
+)
+
+// UsersData holds data for the users page
+type UsersData struct {
+    CurrentUser *UserInfo
+    AllUsers    []*UserInfo
+    ThemeClass  string
+}
+
+// UserInfo holds display information for a user
+type UserInfo struct {
+    ID              int
+    Name            string
+    Age             int
+    ExperienceLevel string
+    IsCurrent       bool
+}
+
+// HandleUsers renders the users management page
+func (s *Server) HandleUsers(w http.ResponseWriter, r *http.Request) {
+    currentUser, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to get current user", http.StatusInternalServerError)
+        return
+    }
+
+    allUsers, err := s.db.GetAllUsers()
+    if err != nil {
+        http.Error(w, "Failed to load users", http.StatusInternalServerError)
+        log.Printf("Error loading users: %v", err)
+        return
+    }
+
+    // Convert to UserInfo
+    var usersInfo []*UserInfo
+    for _, user := range allUsers {
+        usersInfo = append(usersInfo, &UserInfo{
+            ID:              user.ID,
+            Name:            user.Name,
+            Age:             user.Age,
+            ExperienceLevel: user.ExperienceLevel,
+            IsCurrent:       user.ID == currentUser.ID,
+        })
+    }
+
+    data := UsersData{
+        CurrentUser: &UserInfo{
+            ID:              currentUser.ID,
+            Name:            currentUser.Name,
+            Age:             currentUser.Age,
+            ExperienceLevel: currentUser.ExperienceLevel,
+            IsCurrent:       true,
+        },
+        AllUsers:   usersInfo,
+        ThemeClass: s.GetThemeClass(currentUser.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "users.html", data); err != nil {
+        http.Error(w, "Failed to render template", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// HandleCreateUser handles creating a new user
+func (s *Server) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Parse form
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    name := r.FormValue("name")
+    ageStr := r.FormValue("age")
+    experienceLevel := r.FormValue("experience_level")
+    primarySport := r.FormValue("primary_sport")
+
+    if name == "" || ageStr == "" || experienceLevel == "" || primarySport == "" {
+        http.Error(w, "All fields are required", http.StatusBadRequest)
+        return
+    }
+
+    age, err := strconv.Atoi(ageStr)
+    if err != nil {
+        http.Error(w, "Invalid age", http.StatusBadRequest)
+        return
+    }
+
+    // Create user in database
+    user, err := s.db.CreateUser(name, age, experienceLevel)
+    if err != nil {
+        http.Error(w, "Failed to create user", http.StatusInternalServerError)
+        log.Printf("Error creating user: %v", err)
+        return
+    }
+
+    // Create primary sport entry for this user
+    err = s.db.CreateUserSport(user.ID, primarySport, true)
+    if err != nil {
+        log.Printf("Warning: Failed to create primary sport for user %d: %v", user.ID, err)
+        // Don't fail the user creation, just log the warning
+    }
+
+    log.Printf("Created new user: %s (ID: %d) with primary sport: %s", user.Name, user.ID, primarySport)
+
+    // Redirect to users page
+    http.Redirect(w, r, "/users", http.StatusSeeOther)
+}
+
+// HandleSwitchUser handles switching the current user
+func (s *Server) HandleSwitchUser(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    userIDStr := r.FormValue("user_id")
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    // Verify user exists
+    user, err := s.db.GetUser(userID)
+    if err != nil {
+        http.Error(w, "User not found", http.StatusNotFound)
+        return
+    }
+
+    // Set cookie for new user
+    SetCurrentUserCookie(w, user.ID)
+
+    log.Printf("Switched to user: %s (ID: %d)", user.Name, user.ID)
+
+    // Redirect to dashboard
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make build:*)",
+      "Bash(./bin/server:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(sqlite3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

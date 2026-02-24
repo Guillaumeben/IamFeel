@@ -1,0 +1,172 @@
+# Sport Configuration Template
+# Copy this file and customize for your sport
+
+sport_name: "Your Sport"
+sport_type: "endurance" # options: combat, endurance, strength, skill, team
+
+# Training Phases
+# Define the different training phases for periodization
+phases:
+  - name: "base_building"
+    display_name: "Base Building"
+    typical_duration_weeks: 4-6
+    focus: "Building foundational fitness and technique"
+    priorities:
+      - "Volume over intensity"
+      - "Technique fundamentals"
+      - "Mobility and conditioning"
+
+  - name: "strength"
+    display_name: "Strength Phase"
+    typical_duration_weeks: 4-6
+    focus: "Developing maximal strength and power"
+    priorities:
+      - "Heavy compound movements"
+      - "Lower volume, higher intensity"
+      - "Adequate recovery"
+
+  - name: "power"
+    display_name: "Power Development"
+    typical_duration_weeks: 3-4
+    focus: "Converting strength into explosive power"
+    priorities:
+      - "Plyometrics and explosive work"
+      - "Sport-specific power movements"
+      - "Speed development"
+
+  - name: "competition_prep"
+    display_name: "Competition Prep"
+    typical_duration_weeks: 2-4
+    focus: "Peaking for competition"
+    priorities:
+      - "Sport-specific skills"
+      - "Tactical preparation"
+      - "Maintain fitness, reduce fatigue"
+
+  - name: "recovery"
+    display_name: "Active Recovery"
+    typical_duration_weeks: 1-2
+    focus: "Recovery and regeneration"
+    priorities:
+      - "Low intensity work"
+      - "Address weaknesses"
+      - "Mental reset"
+
+# Session Types
+# Define all types of training sessions available
+session_types:
+  - id: "technical"
+    name: "Technical Training"
+    description: "Skill development and technique work"
+    typical_duration_minutes: 60-90
+    intensity: "low-medium"
+    primary_adaptation: "skill"
+    recovery_impact: "low"
+
+  - id: "conditioning"
+    name: "Conditioning"
+    description: "Cardiovascular and metabolic conditioning"
+    typical_duration_minutes: 30-60
+    intensity: "medium-high"
+    primary_adaptation: "endurance"
+    recovery_impact: "medium"
+
+  - id: "strength"
+    name: "Strength Training"
+    description: "Resistance training for strength development"
+    typical_duration_minutes: 60-75
+    intensity: "high"
+    primary_adaptation: "strength"
+    recovery_impact: "high"
+
+  - id: "active_recovery"
+    name: "Active Recovery"
+    description: "Light movement to promote recovery"
+    typical_duration_minutes: 30-45
+    intensity: "very-low"
+    primary_adaptation: "recovery"
+    recovery_impact: "negative" # helps recovery
+
+  - id: "competition_simulation"
+    name: "Competition Simulation"
+    description: "Full simulation of competition conditions"
+    typical_duration_minutes: 60-120
+    intensity: "high"
+    primary_adaptation: "skill, mental"
+    recovery_impact: "very-high"
+
+# Equipment
+# List equipment that might be available
+equipment:
+  - "None (bodyweight)"
+  - "Basic gym (weights, cardio)"
+  - "Full gym access"
+  - "Sport-specific equipment"
+  - "Home setup"
+
+# Typical Weekly Structure
+# General guidelines for session frequency
+typical_weekly_structure:
+  beginner:
+    sessions_per_week: 3-4
+    rest_days: 3-4
+    notes: "Focus on consistency and technique"
+
+  intermediate:
+    sessions_per_week: 4-6
+    rest_days: 1-3
+    notes: "Increase volume and intensity gradually"
+
+  advanced:
+    sessions_per_week: 6-8
+    rest_days: 1-2
+    notes: "High volume, structured periodization"
+
+# Recovery Guidelines
+# How long to recover after different session types
+recovery_guidelines:
+  very_low_intensity:
+    rest_before_next_hard_session: 0
+    rest_before_same_type: 0
+
+  low_intensity:
+    rest_before_next_hard_session: 0
+    rest_before_same_type: 1
+
+  medium_intensity:
+    rest_before_next_hard_session: 1
+    rest_before_same_type: 2
+
+  high_intensity:
+    rest_before_next_hard_session: 2
+    rest_before_same_type: 3
+
+  very_high_intensity:
+    rest_before_next_hard_session: 3
+    rest_before_same_type: 4
+
+# Sport-Specific Considerations
+# Add any unique aspects of your sport
+considerations:
+  - "List any sport-specific factors"
+  - "Injury prevention focus areas"
+  - "Seasonal variations"
+  - "Competition schedules"
+
+# Nutrition Guidelines (optional)
+nutrition:
+  general_approach: "Describe the nutritional philosophy for this sport"
+  key_supplements:
+    - "Supplement 1 and its purpose"
+    - "Supplement 2 and its purpose"
+  hydration_focus: "Any specific hydration needs"
+
+# Agent Instructions
+# Additional context for the AI coach
+agent_context: |
+  When coaching this sport, remember:
+  - Key performance indicators
+  - Common mistakes to avoid
+  - Progression principles
+  - Injury prevention priorities
+  - Mental aspects of the sport

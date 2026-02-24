@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Training History</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history" class="active">History</a>
+                <a href="/users">Users</a>
+                <a href="/settings">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Training History</h2>
+            <p>Your recent training sessions</p>
+        </div>
+
+        {{if .Sessions}}
+        <div class="history-list">
+            {{range .Sessions}}
+            <div class="history-card">
+                <div class="history-header">
+                    <div>
+                        <h3>{{.SessionType}}</h3>
+                        <span class="history-date">{{.SessionDate.Format "Monday, January 2, 2006"}}</span>
+                    </div>
+                    <div class="history-stats">
+                        <span class="stat">
+                            <span class="stat-label">Duration</span>
+                            <span class="stat-value">{{.DurationMinutes}} min</span>
+                        </span>
+                        <span class="stat">
+                            <span class="stat-label">Effort</span>
+                            <span class="stat-value">{{.PerceivedEffort}}/10</span>
+                        </span>
+                    </div>
+                </div>
+
+                {{if .Skipped}}
+                <div class="status-badge skipped-badge">⊘ Skipped</div>
+                {{if .SkipReason}}
+                <div class="skip-reason">
+                    <strong>Reason:</strong> {{.SkipReason}}
+                </div>
+                {{end}}
+                {{else if .Completed}}
+                <div class="status-badge completed-badge">✓ Completed</div>
+                {{end}}
+
+                {{if .PerformanceNotes}}
+                <div class="performance-notes">
+                    <strong>Performance:</strong> {{.PerformanceNotes}}
+                </div>
+                {{end}}
+
+                {{if .Notes}}
+                <div class="history-notes">
+                    <strong>Notes:</strong> {{.Notes}}
+                </div>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="empty-state">
+            <h3>No training sessions logged yet</h3>
+            <p>Start logging your workouts from the dashboard!</p>
+            <a href="/" class="btn btn-primary">Go to Dashboard</a>
+        </div>
+        {{end}}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+</body>
+</html>

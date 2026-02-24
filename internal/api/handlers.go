@@ -1,0 +1,999 @@
+package api
+
+import (
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+    "strconv"
+    "strings"
+    "time"
+
+    "github.com/tuxnam/iamfeel/internal/agent"
+    "github.com/tuxnam/iamfeel/internal/config"
+    "github.com/tuxnam/iamfeel/internal/db"
+)
+
+// DashboardData holds data for the dashboard template
+type DashboardData struct {
+    UserName        string
+    CurrentWeek     string
+    CurrentDateTime string
+    Plan            *db.WeeklyPlan
+    TodayDate       string
+    Sessions        []*db.TrainingSession
+    PlannedSessions []*db.TrainingSession
+    Supplements     []config.Supplement
+    AIRecommendations string
+    ThemeClass      string
+}
+
+// HandleDashboard renders the main dashboard
+func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    now := time.Now()
+    weekStart := agent.GetWeekStart(now)
+
+    // Get current week's plan
+    plan, err := s.db.GetWeeklyPlan(user.ID, weekStart)
+    if err != nil {
+        // No plan exists yet, that's okay
+        plan = nil
+    }
+
+    // Get this week's completed sessions
+    weekEnd := weekStart.AddDate(0, 0, 6)
+    sessions, err := s.db.GetTrainingSessions(user.ID, weekStart, weekEnd)
+    if err != nil {
+        log.Printf("Error loading sessions: %v", err)
+        sessions = []*db.TrainingSession{}
+    }
+
+    // Get planned sessions for this week
+    plannedSessions, err := s.db.GetPlannedSessions(user.ID, weekStart, weekEnd)
+    if err != nil {
+        log.Printf("Error loading planned sessions: %v", err)
+        plannedSessions = []*db.TrainingSession{}
+    }
+
+    // Load user config
+    userConfig, err := s.GetUserConfig(user.ID)
+    if err != nil {
+        log.Printf("Error loading user config: %v", err)
+    }
+
+    supplements := []config.Supplement{}
+    if userConfig != nil {
+        supplements = userConfig.Supplements
+    }
+
+    data := DashboardData{
+        UserName:          user.Name,
+        CurrentWeek:       fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006")),
+        CurrentDateTime:   now.Format("Monday, January 2, 2006 at 3:04 PM"),
+        Plan:              plan,
+        TodayDate:         now.Format("2006-01-02"),
+        Sessions:          sessions,
+        PlannedSessions:   plannedSessions,
+        Supplements:       supplements,
+        AIRecommendations: "Stay consistent with your training schedule. Focus on recovery between intense sessions.",
+        ThemeClass:        s.GetThemeClass(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "dashboard.html", data); err != nil {
+        http.Error(w, "Failed to render template", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// HistoryData holds data for the history page
+type HistoryData struct {
+    UserName   string
+    Sessions   []*db.TrainingSession
+    ThemeClass string
+}
+
+// HandleHistory renders the training history page
+func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Get last 50 past sessions (only sessions before today)
+    sessions, err := s.db.GetPastTrainingSessions(user.ID, 50)
+    if err != nil {
+        http.Error(w, "Failed to load sessions", http.StatusInternalServerError)
+        log.Printf("Error loading sessions: %v", err)
+        return
+    }
+
+    data := HistoryData{
+        UserName:   user.Name,
+        Sessions:   sessions,
+        ThemeClass: s.GetThemeClass(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "history.html", data); err != nil {
+        http.Error(w, "Failed to render template", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// HandleLogSession handles logging a completed training session
+func (s *Server) HandleLogSession(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Parse form
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    // Extract form values
+    sessionDate := r.FormValue("session_date")
+    sessionType := r.FormValue("session_type")
+    durationStr := r.FormValue("duration_minutes")
+    effortStr := r.FormValue("perceived_effort")
+    notes := r.FormValue("notes")
+
+    // Parse duration
+    duration, err := strconv.Atoi(durationStr)
+    if err != nil {
+        http.Error(w, "Invalid duration", http.StatusBadRequest)
+        return
+    }
+
+    // Parse effort
+    effort, err := strconv.Atoi(effortStr)
+    if err != nil || effort < 1 || effort > 10 {
+        http.Error(w, "Invalid effort (must be 1-10)", http.StatusBadRequest)
+        return
+    }
+
+    // Parse date
+    date, err := time.Parse("2006-01-02", sessionDate)
+    if err != nil {
+        http.Error(w, "Invalid date format", http.StatusBadRequest)
+        return
+    }
+
+    // Create session
+    session := &db.TrainingSession{
+        UserID:          user.ID,
+        SessionDate:     date,
+        SessionType:     sessionType,
+        DurationMinutes: duration,
+        PerceivedEffort: effort,
+        Notes:           notes,
+        Completed:       true,
+        Planned:         false,
+    }
+
+    if err := s.db.CreateTrainingSession(session); err != nil {
+        http.Error(w, "Failed to save session", http.StatusInternalServerError)
+        log.Printf("Error saving session: %v", err)
+        return
+    }
+
+    // Redirect back to dashboard
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// HandleCurrentPlan returns the current week's plan as plain text
+func (s *Server) HandleCurrentPlan(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        return
+    }
+
+    weekStart := agent.GetWeekStart(time.Now())
+    plan, err := s.db.GetWeeklyPlan(user.ID, weekStart)
+    if err != nil {
+        http.Error(w, "No plan found for this week", http.StatusNotFound)
+        return
+    }
+
+    w.Header().Set("Content-Type", "text/plain")
+    w.Write([]byte(plan.PlanData))
+}
+
+// ModifyDayData holds data for the modify day page
+type ModifyDayData struct {
+    UserName    string
+    CurrentWeek string
+    Plan        *db.WeeklyPlan
+    DayName     string
+    Days        []string
+    ThemeClass  string
+}
+
+// HandleModifyDayForm shows the form to modify a day
+func (s *Server) HandleModifyDayForm(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    weekStart := agent.GetWeekStart(time.Now())
+    plan, err := s.db.GetWeeklyPlan(user.ID, weekStart)
+    if err != nil {
+        http.Error(w, "No plan found for this week", http.StatusNotFound)
+        return
+    }
+
+    weekEnd := weekStart.AddDate(0, 0, 6)
+    days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+
+    dayName := r.URL.Query().Get("day")
+    if dayName == "" {
+        dayName = days[0]
+    }
+
+    data := ModifyDayData{
+        UserName:    user.Name,
+        CurrentWeek: fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006")),
+        Plan:        plan,
+        DayName:     dayName,
+        Days:        days,
+        ThemeClass:  s.GetThemeClass(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "modify_day.html", data); err != nil {
+        http.Error(w, "Failed to render template", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// ModifyDayProposalData holds data for the modification proposal page
+type ModifyDayProposalData struct {
+    UserName           string
+    CurrentWeek        string
+    DayName            string
+    ModificationReason string
+    NewDayPlan         string
+    OriginalPlan       string
+    ThemeClass         string
+}
+
+// HandleModifyDayRequest generates a modified day plan
+func (s *Server) HandleModifyDayRequest(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Parse form
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    dayName := r.FormValue("day_name")
+    modificationReason := r.FormValue("modification_reason")
+
+    if dayName == "" || modificationReason == "" {
+        http.Error(w, "Day name and modification reason are required", http.StatusBadRequest)
+        return
+    }
+
+    weekStart := agent.GetWeekStart(time.Now())
+    plan, err := s.db.GetWeeklyPlan(user.ID, weekStart)
+    if err != nil {
+        http.Error(w, "No plan found for this week", http.StatusNotFound)
+        return
+    }
+
+    // Load user config
+    userConfig, err := s.GetUserConfig(user.ID)
+    if err != nil {
+        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
+        log.Printf("Error loading user config: %v", err)
+        return
+    }
+
+    // Generate modified day
+    ctx := r.Context()
+    newDay, err := agent.GenerateDayModification(
+        ctx,
+        s.db,
+        userConfig,
+        weekStart,
+        plan.PlanData,
+        dayName,
+        modificationReason,
+    )
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Failed to generate modification: %v", err), http.StatusInternalServerError)
+        log.Printf("Error generating modification: %v", err)
+        return
+    }
+
+    weekEnd := weekStart.AddDate(0, 0, 6)
+    data := ModifyDayProposalData{
+        UserName:           user.Name,
+        CurrentWeek:        fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006")),
+        DayName:            dayName,
+        ModificationReason: modificationReason,
+        NewDayPlan:         newDay,
+        OriginalPlan:       plan.PlanData,
+        ThemeClass:         s.GetThemeClass(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "modify_proposal.html", data); err != nil {
+        http.Error(w, "Failed to render template", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// HandleAcceptModification accepts and saves the modified plan
+func (s *Server) HandleAcceptModification(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Parse form
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    dayName := r.FormValue("day_name")
+    newDayPlan := r.FormValue("new_day_plan")
+
+    weekStart := agent.GetWeekStart(time.Now())
+    plan, err := s.db.GetWeeklyPlan(user.ID, weekStart)
+    if err != nil {
+        http.Error(w, "No plan found for this week", http.StatusNotFound)
+        return
+    }
+
+    // Replace the day in the plan (simple text replacement)
+    // This is basic - could be improved with better parsing
+    updatedPlan := replaceDayInPlan(plan.PlanData, dayName, newDayPlan)
+
+    // Update the plan in database
+    plan.PlanData = updatedPlan
+    if err := s.db.UpdateWeeklyPlan(plan); err != nil {
+        http.Error(w, "Failed to update plan", http.StatusInternalServerError)
+        log.Printf("Error updating plan: %v", err)
+        return
+    }
+
+    // Redirect back to dashboard
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// HandleCompleteSession marks a planned session as complete
+func (s *Server) HandleCompleteSession(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    sessionIDStr := r.FormValue("session_id")
+    durationStr := r.FormValue("duration_minutes")
+    effortStr := r.FormValue("perceived_effort")
+    notes := r.FormValue("notes")
+    performanceNotes := r.FormValue("performance_notes")
+
+    sessionID, err := strconv.Atoi(sessionIDStr)
+    if err != nil {
+        http.Error(w, "Invalid session ID", http.StatusBadRequest)
+        return
+    }
+
+    duration, err := strconv.Atoi(durationStr)
+    if err != nil {
+        http.Error(w, "Invalid duration", http.StatusBadRequest)
+        return
+    }
+
+    effort, err := strconv.Atoi(effortStr)
+    if err != nil || effort < 1 || effort > 10 {
+        http.Error(w, "Invalid effort (must be 1-10)", http.StatusBadRequest)
+        return
+    }
+
+    // Get the planned session
+    weekStart := agent.GetWeekStart(time.Now())
+    weekEnd := weekStart.AddDate(0, 0, 6)
+    sessions, err := s.db.GetPlannedSessions(user.ID, weekStart, weekEnd)
+    if err != nil {
+        http.Error(w, "Failed to load planned sessions", http.StatusInternalServerError)
+        return
+    }
+
+    var session *db.TrainingSession
+    for _, sess := range sessions {
+        if sess.ID == sessionID {
+            session = sess
+            break
+        }
+    }
+
+    if session == nil {
+        http.Error(w, "Session not found", http.StatusNotFound)
+        return
+    }
+
+    // Update the session
+    session.Completed = true
+    session.DurationMinutes = duration
+    session.PerceivedEffort = effort
+    session.Notes = notes
+    session.PerformanceNotes = performanceNotes
+    session.Skipped = false
+
+    if err := s.db.UpdateTrainingSession(session); err != nil {
+        http.Error(w, "Failed to update session", http.StatusInternalServerError)
+        log.Printf("Error updating session: %v", err)
+        return
+    }
+
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// HandleSkipSession marks a planned session as skipped
+func (s *Server) HandleSkipSession(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    sessionIDStr := r.FormValue("session_id")
+    skipReason := r.FormValue("skip_reason")
+
+    sessionID, err := strconv.Atoi(sessionIDStr)
+    if err != nil {
+        http.Error(w, "Invalid session ID", http.StatusBadRequest)
+        return
+    }
+
+    if skipReason == "" {
+        http.Error(w, "Skip reason is required", http.StatusBadRequest)
+        return
+    }
+
+    // Get the planned session
+    weekStart := agent.GetWeekStart(time.Now())
+    weekEnd := weekStart.AddDate(0, 0, 6)
+    sessions, err := s.db.GetPlannedSessions(user.ID, weekStart, weekEnd)
+    if err != nil {
+        http.Error(w, "Failed to load planned sessions", http.StatusInternalServerError)
+        return
+    }
+
+    var session *db.TrainingSession
+    for _, sess := range sessions {
+        if sess.ID == sessionID {
+            session = sess
+            break
+        }
+    }
+
+    if session == nil {
+        http.Error(w, "Session not found", http.StatusNotFound)
+        return
+    }
+
+    // Update the session
+    session.Skipped = true
+    session.SkipReason = skipReason
+    session.Completed = false
+
+    if err := s.db.UpdateTrainingSession(session); err != nil {
+        http.Error(w, "Failed to update session", http.StatusInternalServerError)
+        log.Printf("Error updating session: %v", err)
+        return
+    }
+
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// replaceDayInPlan replaces a specific day's section in the plan
+// This is a simple implementation - could be improved with better parsing
+func replaceDayInPlan(originalPlan string, dayName string, newDayPlan string) string {
+    // Find the day section
+    dayMarker := fmt.Sprintf("\n%s:", dayName)
+    startIdx := -1
+
+    for i := 0; i < len(originalPlan)-len(dayMarker); i++ {
+        if originalPlan[i:i+len(dayMarker)] == dayMarker {
+            startIdx = i + 1 // Include the newline
+            break
+        }
+    }
+
+    if startIdx == -1 {
+        // Day not found, append at end
+        return originalPlan + "\n\n" + newDayPlan
+    }
+
+    // Find the next day or end of plan
+    nextDays := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "NOTES:"}
+    endIdx := len(originalPlan)
+
+    for _, nextDay := range nextDays {
+        if nextDay == dayName {
+            continue
+        }
+        marker := fmt.Sprintf("\n%s:", nextDay)
+        for i := startIdx; i < len(originalPlan)-len(marker); i++ {
+            if originalPlan[i:i+len(marker)] == marker {
+                if i < endIdx {
+                    endIdx = i
+                }
+                break
+            }
+        }
+    }
+
+    // Replace the section
+    return originalPlan[:startIdx] + newDayPlan + "\n" + originalPlan[endIdx:]
+}
+
+// SettingsData holds data for the settings template
+type SettingsData struct {
+    User       *db.User
+    Config     *config.UserConfig
+    Success    bool
+    Error      string
+    ThemeClass string
+}
+
+// HandleSettings displays the settings page
+func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Load user config
+    userConfig, err := s.GetUserConfig(user.ID)
+    if err != nil {
+        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
+        log.Printf("Error loading user config: %v", err)
+        return
+    }
+
+    data := SettingsData{
+        User:       user,
+        Config:     userConfig,
+        ThemeClass: s.GetThemeClass(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
+        http.Error(w, "Failed to render settings", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// HandleSettingsSave saves updated settings
+func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    // Get current user
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Load user config
+    userConfig, err := s.GetUserConfig(user.ID)
+    if err != nil {
+        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
+        log.Printf("Error loading user config: %v", err)
+        return
+    }
+
+    // Update user profile
+    if name := r.FormValue("user_name"); name != "" {
+        user.Name = strings.TrimSpace(name)
+        userConfig.User.Name = user.Name
+    }
+    if ageStr := r.FormValue("user_age"); ageStr != "" {
+        if age, err := strconv.Atoi(ageStr); err == nil {
+            user.Age = age
+            userConfig.User.Age = age
+        }
+    }
+    if weightStr := r.FormValue("user_weight"); weightStr != "" {
+        if weight, err := strconv.ParseFloat(weightStr, 64); err == nil {
+            user.Weight = weight
+            userConfig.User.Weight = weight
+        }
+    }
+    if heightStr := r.FormValue("user_height"); heightStr != "" {
+        if height, err := strconv.ParseFloat(heightStr, 64); err == nil {
+            user.Height = height
+            userConfig.User.Height = height
+        }
+    }
+    if experience := r.FormValue("user_experience"); experience != "" {
+        user.ExperienceLevel = experience
+        userConfig.User.ExperienceLevel = experience
+    }
+
+    // Update user in database
+    if err := s.db.UpdateUser(user); err != nil {
+        log.Printf("Failed to update user: %v", err)
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      fmt.Sprintf("Failed to update user: %v", err),
+            ThemeClass: s.GetThemeClass(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    // Update primary sport
+    if sport := r.FormValue("primary_sport"); sport != "" {
+        // Update existing sports or create new one
+        found := false
+        for i := range userConfig.Sports {
+            if userConfig.Sports[i].Primary {
+                userConfig.Sports[i].Name = sport
+                found = true
+                break
+            }
+        }
+        if !found {
+            userConfig.Sports = []config.UserSport{{Name: sport, Primary: true}}
+        }
+    }
+
+    // Update goals
+    if shortTermText := r.FormValue("short_term_goals"); shortTermText != "" {
+        goals := []string{}
+        for _, line := range strings.Split(shortTermText, "\n") {
+            line = strings.TrimSpace(line)
+            if line != "" {
+                goals = append(goals, line)
+            }
+        }
+        userConfig.Goals.ShortTerm = goals
+    } else {
+        userConfig.Goals.ShortTerm = []string{}
+    }
+
+    if mediumTermText := r.FormValue("medium_term_goals"); mediumTermText != "" {
+        goals := []string{}
+        for _, line := range strings.Split(mediumTermText, "\n") {
+            line = strings.TrimSpace(line)
+            if line != "" {
+                goals = append(goals, line)
+            }
+        }
+        userConfig.Goals.MediumTerm = goals
+    } else {
+        userConfig.Goals.MediumTerm = []string{}
+    }
+
+    if longTermText := r.FormValue("long_term_goals"); longTermText != "" {
+        goals := []string{}
+        for _, line := range strings.Split(longTermText, "\n") {
+            line = strings.TrimSpace(line)
+            if line != "" {
+                goals = append(goals, line)
+            }
+        }
+        userConfig.Goals.LongTerm = goals
+    } else {
+        userConfig.Goals.LongTerm = []string{}
+    }
+
+    // Update availability
+    days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+    for _, day := range days {
+        morning := r.FormValue(fmt.Sprintf("avail_%s_morning", day)) != ""
+        lunch := r.FormValue(fmt.Sprintf("avail_%s_lunch", day)) != ""
+        evening := r.FormValue(fmt.Sprintf("avail_%s_evening", day)) != ""
+
+        if userConfig.Availability == nil {
+            userConfig.Availability = make(map[string]config.DayAvailability)
+        }
+
+        userConfig.Availability[day] = config.DayAvailability{
+            Morning: morning,
+            Lunch:   lunch,
+            Evening: evening,
+        }
+    }
+
+    // Update preferences
+    if goal := r.FormValue("primary_goal"); goal != "" {
+        userConfig.Preferences.PrimaryGoal = goal
+    }
+    if sessionsStr := r.FormValue("sessions_per_week"); sessionsStr != "" {
+        if sessions, err := strconv.Atoi(sessionsStr); err == nil {
+            userConfig.Preferences.SessionsPerWeek = sessions
+        }
+    }
+    if durationStr := r.FormValue("session_duration"); durationStr != "" {
+        if duration, err := strconv.Atoi(durationStr); err == nil {
+            userConfig.Preferences.PreferredDuration = duration
+        }
+    }
+    if notes := r.FormValue("training_notes"); notes != "" {
+        userConfig.Preferences.Notes = strings.TrimSpace(notes)
+    }
+
+    // Update home equipment
+    homeEquipment := []string{}
+    for _, item := range r.Form["home_equipment[]"] {
+        item = strings.TrimSpace(item)
+        if item != "" {
+            homeEquipment = append(homeEquipment, item)
+        }
+    }
+    userConfig.Equipment.Home = homeEquipment
+
+    // Update gyms
+    gymNames := r.Form["gym_name[]"]
+    gymTypes := r.Form["gym_type[]"]
+    gymMemberships := r.Form["gym_membership[]"]
+
+    newGyms := []config.Gym{}
+    for i := range gymNames {
+        name := strings.TrimSpace(gymNames[i])
+        if name == "" {
+            continue
+        }
+
+        gym := config.Gym{
+            Name:       name,
+            Type:       gymTypes[i],
+            Membership: gymMemberships[i],
+            Sessions:   []config.ClubSession{},
+        }
+
+        // Get sessions for this gym
+        sessionNames := r.Form[fmt.Sprintf("gym_%d_session_name[]", i)]
+        sessionDescriptions := r.Form[fmt.Sprintf("gym_%d_session_description[]", i)]
+        sessionOccurrences := r.Form[fmt.Sprintf("gym_%d_session_occurrences[]", i)]
+        sessionCosts := r.Form[fmt.Sprintf("gym_%d_session_cost[]", i)]
+
+        for j := range sessionNames {
+            sessionName := strings.TrimSpace(sessionNames[j])
+            if sessionName == "" {
+                continue
+            }
+
+            sessionDesc := ""
+            if j < len(sessionDescriptions) {
+                sessionDesc = strings.TrimSpace(sessionDescriptions[j])
+            }
+
+            sessionOccur := ""
+            if j < len(sessionOccurrences) {
+                sessionOccur = strings.TrimSpace(sessionOccurrences[j])
+            }
+
+            sessionCost := ""
+            if j < len(sessionCosts) {
+                sessionCost = strings.TrimSpace(sessionCosts[j])
+            }
+
+            session := config.ClubSession{
+                Name:        sessionName,
+                Description: sessionDesc,
+                Occurrences: sessionOccur,
+                Cost:        sessionCost,
+            }
+            gym.Sessions = append(gym.Sessions, session)
+        }
+
+        newGyms = append(newGyms, gym)
+    }
+    userConfig.Equipment.Gyms = newGyms
+
+    // Save to per-user config file
+    if err := config.SaveUserConfigByID(user.ID, userConfig); err != nil {
+        log.Printf("Failed to save config: %v", err)
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      fmt.Sprintf("Failed to save settings: %v", err),
+            ThemeClass: s.GetThemeClass(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    // Redirect back to settings with success message
+    data := SettingsData{
+        User:       user,
+        Config:     userConfig,
+        Success:    true,
+        ThemeClass: s.GetThemeClass(user.ID),
+    }
+    if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
+        http.Error(w, "Failed to render settings", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
+}
+
+// validatePlanGenerationSettings checks if sufficient configuration exists for plan generation
+func validatePlanGenerationSettings(userConfig *config.UserConfig) []string {
+    var errors []string
+
+    // Check primary sport
+    if len(userConfig.Sports) == 0 || userConfig.Sports[0].Name == "" {
+        errors = append(errors, "Primary sport must be selected")
+    } else {
+        // Check if sport config file exists
+        sportName := userConfig.Sports[0].Name
+        if _, err := config.LoadSportConfig(sportName); err != nil {
+            errors = append(errors, fmt.Sprintf("Sport configuration for '%s' not found", sportName))
+        }
+    }
+
+    // Check at least one goal
+    if len(userConfig.Goals.ShortTerm) == 0 && len(userConfig.Goals.MediumTerm) == 0 && len(userConfig.Goals.LongTerm) == 0 {
+        errors = append(errors, "At least one goal must be defined (short-term, medium-term, or long-term)")
+    }
+
+    // Check availability
+    hasAvailability := false
+    if userConfig.Availability != nil {
+        for _, day := range userConfig.Availability {
+            if day.Morning || day.Lunch || day.Evening {
+                hasAvailability = true
+                break
+            }
+        }
+    }
+    if !hasAvailability {
+        errors = append(errors, "Weekly availability must be set for at least one time slot")
+    }
+
+    // Check API key
+    if os.Getenv("ANTHROPIC_API_KEY") == "" {
+        errors = append(errors, "ANTHROPIC_API_KEY environment variable is not set")
+    }
+
+    return errors
+}
+
+// HandleGeneratePlan generates a new weekly training plan
+func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Load user config
+    userConfig, err := s.GetUserConfig(user.ID)
+    if err != nil {
+        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
+        log.Printf("Error loading user config: %v", err)
+        return
+    }
+
+    // Validate settings
+    validationErrors := validatePlanGenerationSettings(userConfig)
+    if len(validationErrors) > 0 {
+        // Show settings page with validation errors
+        errorMsg := "Cannot generate plan. Please complete your profile first:\n"
+        for _, err := range validationErrors {
+            errorMsg += "• " + err + "\n"
+        }
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      errorMsg,
+            ThemeClass: s.GetThemeClass(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    // Generate plan
+    weekStart := agent.GetWeekStart(time.Now())
+    planText, err := agent.GenerateWeeklyPlan(r.Context(), s.db, userConfig, weekStart)
+    if err != nil {
+        log.Printf("Failed to generate plan: %v", err)
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      fmt.Sprintf("Failed to generate plan: %v", err),
+            ThemeClass: s.GetThemeClass(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    // Save plan
+    if err := agent.SaveWeeklyPlan(s.db, user.ID, weekStart, planText); err != nil {
+        log.Printf("Failed to save plan: %v", err)
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      fmt.Sprintf("Failed to save plan: %v", err),
+            ThemeClass: s.GetThemeClass(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    log.Printf("Successfully generated and saved weekly plan for user: %s (ID: %d)", user.Name, user.ID)
+
+    // Redirect to dashboard to show new plan
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}

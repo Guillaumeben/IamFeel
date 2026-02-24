@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Settings</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history">History</a>
+                <a href="/users">Users</a>
+                <a href="/settings" class="active">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="welcome">
+            <h2>⚙️ Settings</h2>
+            <p>Manage your profile, equipment, and preferences</p>
+        </div>
+
+        {{if .Success}}
+        <div class="alert alert-success">
+            ✓ Settings saved successfully!
+        </div>
+        {{end}}
+
+        {{if .Error}}
+        <div class="alert alert-error">
+            ⚠️ {{.Error}}
+        </div>
+        {{end}}
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+            <button type="button" class="tab-button active" onclick="switchTab('profile', this)">👤 Profile</button>
+            <button type="button" class="tab-button" onclick="switchTab('equipment', this)">🏋️ Equipment & Gyms</button>
+            <button type="button" class="tab-button" onclick="switchTab('training', this)" style="background: #10b981; color: white;">📋 Training Setup</button>
+        </div>
+
+        <form method="POST" action="/settings" class="settings-form">
+            <!-- Profile Tab -->
+            <div id="profile-tab" class="tab-content active">
+                <section class="settings-section">
+                    <h3>👤 User Profile</h3>
+                    <p class="section-description">Basic information about you</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="user_name">Name *</label>
+                            <input type="text" id="user_name" name="user_name" value="{{.User.Name}}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user_age">Age *</label>
+                            <input type="number" id="user_age" name="user_age" value="{{.User.Age}}" min="1" max="120" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="user_weight">Weight (kg)</label>
+                            <input type="number" id="user_weight" name="user_weight" value="{{.User.Weight}}" min="0" max="500" step="0.1" placeholder="e.g., 75.5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user_height">Height (cm)</label>
+                            <input type="number" id="user_height" name="user_height" value="{{.User.Height}}" min="0" max="300" step="0.1" placeholder="e.g., 180">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="user_experience">Experience Level *</label>
+                        <select id="user_experience" name="user_experience" required>
+                            <option value="beginner" {{if eq .User.ExperienceLevel "beginner"}}selected{{end}}>Beginner</option>
+                            <option value="intermediate" {{if eq .User.ExperienceLevel "intermediate"}}selected{{end}}>Intermediate</option>
+                            <option value="advanced" {{if eq .User.ExperienceLevel "advanced"}}selected{{end}}>Advanced</option>
+                            <option value="elite" {{if eq .User.ExperienceLevel "elite"}}selected{{end}}>Elite</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>🥊 Sport & Goals</h3>
+                    <p class="section-description" style="margin-bottom: 0.25rem;">Your primary sport and training objectives</p>
+                    <p style="margin-bottom: 1.5rem; color: #9ca3af; font-size: 0.75rem; font-style: italic;">* Enter one goal per line</p>
+
+                    <div class="form-group">
+                        <label for="primary_sport">Primary Sport *</label>
+                        <select id="primary_sport" name="primary_sport" required>
+                            {{$primarySport := ""}}
+                            {{range .Config.Sports}}{{if .Primary}}{{$primarySport = .Name}}{{end}}{{end}}
+                            <option value="boxing" {{if eq $primarySport "boxing"}}selected{{end}}>Boxing</option>
+                            <option value="muay_thai" {{if eq $primarySport "muay_thai"}}selected{{end}}>Muay Thai</option>
+                            <option value="mma" {{if eq $primarySport "mma"}}selected{{end}}>MMA</option>
+                            <option value="kickboxing" {{if eq $primarySport "kickboxing"}}selected{{end}}>Kickboxing</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 2rem;">
+                        <label for="short_term_goals">Short-Term Goals</label>
+                        <textarea id="short_term_goals" name="short_term_goals" rows="4" placeholder="Goals for the next 1-3 months (one per line)">{{range .Config.Goals.ShortTerm}}{{.}}
+{{end}}</textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label for="medium_term_goals">Medium-Term Goals</label>
+                        <textarea id="medium_term_goals" name="medium_term_goals" rows="4" placeholder="Goals for 3-12 months (one per line)">{{range .Config.Goals.MediumTerm}}{{.}}
+{{end}}</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="long_term_goals">Long-Term Goals</label>
+                        <textarea id="long_term_goals" name="long_term_goals" rows="4" placeholder="Goals beyond 1 year (one per line)">{{range .Config.Goals.LongTerm}}{{.}}
+{{end}}</textarea>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>📅 Weekly Availability</h3>
+                    <p class="section-description">When you're available to train each week</p>
+
+                    {{$avail := .Config.Availability}}
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        {{$dayAvail := index $avail "Monday"}}
+                        <div class="availability-day">
+                            <h4>Monday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Monday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Monday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Monday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Tuesday"}}
+                        <div class="availability-day">
+                            <h4>Tuesday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Tuesday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Tuesday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Tuesday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Wednesday"}}
+                        <div class="availability-day">
+                            <h4>Wednesday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Wednesday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Wednesday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Wednesday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Thursday"}}
+                        <div class="availability-day">
+                            <h4>Thursday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Thursday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Thursday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Thursday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Friday"}}
+                        <div class="availability-day">
+                            <h4>Friday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Friday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Friday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Friday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Saturday"}}
+                        <div class="availability-day">
+                            <h4>Saturday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Saturday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Saturday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Saturday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                        {{$dayAvail := index $avail "Sunday"}}
+                        <div class="availability-day">
+                            <h4>Sunday</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Sunday_morning" {{if $dayAvail.Morning}}checked{{end}}>
+                                    Morning
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Sunday_lunch" {{if $dayAvail.Lunch}}checked{{end}}>
+                                    Lunch
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" name="avail_Sunday_evening" {{if $dayAvail.Evening}}checked{{end}}>
+                                    Evening
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>🎯 Training Preferences</h3>
+                    <p class="section-description">Your training goals and preferences</p>
+
+                    <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 2rem;">
+                        <label for="primary_goal">Primary Training Goal</label>
+                        <select id="primary_goal" name="primary_goal">
+                            <option value="">Select a goal...</option>
+                            <option value="technique" {{if eq .Config.Preferences.PrimaryGoal "technique"}}selected{{end}}>Improve Technique</option>
+                            <option value="strength" {{if eq .Config.Preferences.PrimaryGoal "strength"}}selected{{end}}>Build Strength</option>
+                            <option value="cardio" {{if eq .Config.Preferences.PrimaryGoal "cardio"}}selected{{end}}>Improve Cardio</option>
+                            <option value="competition" {{if eq .Config.Preferences.PrimaryGoal "competition"}}selected{{end}}>Competition Prep</option>
+                            <option value="general" {{if eq .Config.Preferences.PrimaryGoal "general"}}selected{{end}}>General Fitness</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label for="sessions_per_week">Preferred Sessions Per Week</label>
+                        <input type="number" id="sessions_per_week" name="sessions_per_week" value="{{.Config.Preferences.SessionsPerWeek}}" min="1" max="14" placeholder="e.g., 4">
+                        <small>How many training sessions would you like per week?</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 2rem;">
+                        <label for="session_duration">Preferred Session Duration (minutes)</label>
+                        <input type="number" id="session_duration" name="session_duration" value="{{.Config.Preferences.PreferredDuration}}" min="15" max="180" step="15" placeholder="e.g., 60">
+                        <small>Typical length of each training session</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="training_notes">Additional Notes</label>
+                        <textarea id="training_notes" name="training_notes" rows="4" placeholder="Any injuries, limitations, or specific focus areas...">{{.Config.Preferences.Notes}}</textarea>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Training Setup Tab -->
+            <div id="training-tab" class="tab-content">
+
+                <section class="settings-section">
+                    <h3>📋 Training Plan Generation</h3>
+                    <p class="section-description">Generate a new weekly training plan based on your current settings</p>
+
+                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
+                        <p style="margin-bottom: 1rem; color: #6b7280;">Click the button below to generate a personalized weekly training plan. Make sure you've saved your settings first.</p>
+                        <button type="button" class="btn" style="background: #10b981; color: white;" onclick="window.location.href='/settings/generate-plan'">
+                            Generate Weekly Plan
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Equipment & Gyms Tab -->
+            <div id="equipment-tab" class="tab-content">
+            <!-- Home Equipment Section -->
+            <section class="settings-section">
+                <h3>🏠 Home Equipment</h3>
+                <p class="section-description">Equipment available at your home/garage gym</p>
+
+                <div id="home-equipment-list">
+                    {{range $index, $item := .Config.Equipment.Home}}
+                    <div class="equipment-item">
+                        <input type="text" name="home_equipment[]" value="{{$item}}" placeholder="e.g., Heavy bag, Jump rope">
+                        <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
+                    </div>
+                    {{end}}
+                    {{if not .Config.Equipment.Home}}
+                    <div class="equipment-item">
+                        <input type="text" name="home_equipment[]" value="" placeholder="e.g., Heavy bag, Jump rope">
+                        <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
+                    </div>
+                    {{end}}
+                </div>
+
+                <button type="button" onclick="addHomeEquipment()" class="btn btn-secondary btn-sm">+ Add Equipment</button>
+            </section>
+
+            <!-- Gyms/Clubs Section -->
+            <section class="settings-section">
+                <h3>🏋️ Gyms & Clubs</h3>
+                <p class="section-description">Your gym memberships and their available sessions</p>
+
+                <div id="gyms-list">
+                    {{range $gymIndex, $gym := .Config.Equipment.Gyms}}
+                    <div class="gym-card">
+                        <div class="gym-header">
+                            <input type="text" name="gym_name[]" value="{{$gym.Name}}" placeholder="Gym name" class="gym-name-input">
+                            <button type="button" onclick="removeGym(this)" class="btn-remove">Remove Gym</button>
+                        </div>
+
+                        <div class="gym-details">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select name="gym_type[]">
+                                        <option value="boxing_club" {{if eq $gym.Type "boxing_club"}}selected{{end}}>Boxing Club</option>
+                                        <option value="fitness_gym" {{if eq $gym.Type "fitness_gym"}}selected{{end}}>Fitness Gym</option>
+                                        <option value="mma_gym" {{if eq $gym.Type "mma_gym"}}selected{{end}}>MMA Gym</option>
+                                        <option value="crossfit" {{if eq $gym.Type "crossfit"}}selected{{end}}>CrossFit</option>
+                                        <option value="other" {{if eq $gym.Type "other"}}selected{{end}}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Membership</label>
+                                    <select name="gym_membership[]">
+                                        <option value="unlimited" {{if eq $gym.Membership "unlimited"}}selected{{end}}>Unlimited</option>
+                                        <option value="limited" {{if eq $gym.Membership "limited"}}selected{{end}}>Limited Sessions</option>
+                                        <option value="per_session" {{if eq $gym.Membership "per_session"}}selected{{end}}>Per Session</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4>Available Sessions</h4>
+                        <div class="sessions-tip">
+                            💡 <strong>Tip:</strong> <strong>Name</strong> the session briefly, <strong>describe what</strong> it involves, specify <strong>when</strong> it occurs (days/times/duration), and add the <strong>cost</strong>. Example: Name: "Sparring", Description: "Light to moderate sparring with partner rotation", Occurrences: "Wednesdays 7pm, 45 min"
+                        </div>
+                        <div class="sessions-list" data-gym-index="{{$gymIndex}}">
+                            {{range $sessionIndex, $session := $gym.Sessions}}
+                            <div class="session-item">
+                                <div class="session-field">
+                                    <label class="session-label">Name</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_name[]" value="{{$session.Name}}" placeholder="e.g., Sparring" class="session-name-input">
+                                </div>
+                                <div class="session-field session-field-large">
+                                    <label class="session-label">Description</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_description[]" value="{{$session.Description}}" placeholder="What it involves (e.g., Light sparring with partner rotation)" class="session-desc-input">
+                                </div>
+                                <div class="session-field">
+                                    <label class="session-label">When</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_occurrences[]" value="{{$session.Occurrences}}" placeholder="e.g., Wednesdays 7pm, 45 min" class="session-occur-input">
+                                </div>
+                                <div class="session-field session-field-small">
+                                    <label class="session-label">Cost</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_cost[]" value="{{$session.Cost}}" placeholder="e.g., included, $10" class="session-cost-input">
+                                </div>
+                                <button type="button" onclick="removeSession(this)" class="btn-remove-sm">×</button>
+                            </div>
+                            {{end}}
+                        </div>
+                        <button type="button" onclick="addSession({{$gymIndex}})" class="btn btn-secondary btn-sm">+ Add Session</button>
+                    </div>
+                    {{end}}
+                </div>
+
+                <button type="button" onclick="addGym()" class="btn btn-secondary">+ Add Gym/Club</button>
+            </section>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <a href="/" class="btn btn-secondary" style="text-align: center;">Cancel</a>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        let gymCounter = {{if .Config.Equipment.Gyms}}{{len .Config.Equipment.Gyms}}{{else}}0{{end}};
+
+        function addHomeEquipment() {
+            const list = document.getElementById('home-equipment-list');
+            const div = document.createElement('div');
+            div.className = 'equipment-item';
+            div.innerHTML = `
+                <input type="text" name="home_equipment[]" value="" placeholder="e.g., Heavy bag, Jump rope">
+                <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
+            `;
+            list.appendChild(div);
+        }
+
+        function removeItem(btn) {
+            btn.parentElement.remove();
+        }
+
+        function addGym() {
+            const list = document.getElementById('gyms-list');
+            const div = document.createElement('div');
+            div.className = 'gym-card';
+            div.innerHTML = `
+                <div class="gym-header">
+                    <input type="text" name="gym_name[]" value="" placeholder="Gym name" class="gym-name-input">
+                    <button type="button" onclick="removeGym(this)" class="btn-remove">Remove Gym</button>
+                </div>
+                <div class="gym-details">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select name="gym_type[]">
+                                <option value="boxing_club">Boxing Club</option>
+                                <option value="fitness_gym">Fitness Gym</option>
+                                <option value="mma_gym">MMA Gym</option>
+                                <option value="crossfit">CrossFit</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Membership</label>
+                            <select name="gym_membership[]">
+                                <option value="unlimited">Unlimited</option>
+                                <option value="limited">Limited Sessions</option>
+                                <option value="per_session">Per Session</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <h4>Available Sessions</h4>
+                <div class="sessions-list" data-gym-index="${gymCounter}">
+                </div>
+                <button type="button" onclick="addSession(${gymCounter})" class="btn btn-secondary btn-sm">+ Add Session</button>
+            `;
+            list.appendChild(div);
+            gymCounter++;
+        }
+
+        function removeGym(btn) {
+            btn.closest('.gym-card').remove();
+        }
+
+        function addSession(gymIndex) {
+            const list = document.querySelector(`.sessions-list[data-gym-index="${gymIndex}"]`);
+            const div = document.createElement('div');
+            div.className = 'session-item';
+            div.innerHTML = `
+                <div class="session-field">
+                    <label class="session-label">Name</label>
+                    <input type="text" name="gym_${gymIndex}_session_name[]" value="" placeholder="e.g., Sparring" class="session-name-input">
+                </div>
+                <div class="session-field session-field-large">
+                    <label class="session-label">Description</label>
+                    <input type="text" name="gym_${gymIndex}_session_description[]" value="" placeholder="What it involves (e.g., Light sparring with partner rotation)" class="session-desc-input">
+                </div>
+                <div class="session-field">
+                    <label class="session-label">When</label>
+                    <input type="text" name="gym_${gymIndex}_session_occurrences[]" value="" placeholder="e.g., Wednesdays 7pm, 45 min" class="session-occur-input">
+                </div>
+                <div class="session-field session-field-small">
+                    <label class="session-label">Cost</label>
+                    <input type="text" name="gym_${gymIndex}_session_cost[]" value="" placeholder="e.g., included, $10" class="session-cost-input">
+                </div>
+                <button type="button" onclick="removeSession(this)" class="btn-remove-sm">×</button>
+            `;
+            list.appendChild(div);
+        }
+
+        function removeSession(btn) {
+            btn.parentElement.remove();
+        }
+
+        // Tab switching
+        function switchTab(tabName, clickedButton) {
+            console.log('switchTab called with:', tabName, clickedButton);
+
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            console.log('Found tab contents:', tabContents.length);
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Remove active class from all buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            console.log('Found tab buttons:', tabButtons.length);
+            tabButtons.forEach(button => button.classList.remove('active'));
+
+            // Show selected tab
+            const targetTab = document.getElementById(tabName + '-tab');
+            console.log('Target tab:', targetTab);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+
+            // Activate corresponding button
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

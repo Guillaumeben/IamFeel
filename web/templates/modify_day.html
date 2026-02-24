@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Modify Day</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history">History</a>
+                <a href="/users">Users</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Modify Training Day</h2>
+            <p>Week of {{.CurrentWeek}}</p>
+        </div>
+
+        <section class="modify-section">
+            <div class="current-plan-preview">
+                <h3>Current Plan</h3>
+                <pre>{{.Plan.PlanData}}</pre>
+            </div>
+
+            <div class="modify-form">
+                <h3>Request Modification</h3>
+                <form action="/plan/modify" method="POST">
+                    <div class="form-group">
+                        <label for="day_name">Which day do you want to modify?</label>
+                        <select id="day_name" name="day_name" required>
+                            {{range .Days}}
+                            <option value="{{.}}" {{if eq . $.DayName}}selected{{end}}>{{.}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modification_reason">Why do you want to change this day?</label>
+                        <textarea id="modification_reason" name="modification_reason" rows="5" required placeholder="E.g., 'I'm feeling tired and need something lighter' or 'I have extra energy today, want a harder workout' or 'My shoulder is sore, need to avoid upper body work'"></textarea>
+                        <small>Be specific - the AI will use this to generate a better alternative</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="/" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Generate New Plan for This Day</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+</body>
+</html>

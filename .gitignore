@@ -1,0 +1,68 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.test
+*.out
+go.work
+
+# Data directory (contains user data and database)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# User configuration (may contain sensitive info)
+user_config.yaml
+**/user_config.yaml
+
+# Environment variables and secrets
+.env
+.env.local
+*.key
+*.pem
+
+# API keys
+anthropic_key.txt
+openai_key.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+
+# Dependencies
+vendor/
+
+# Test coverage
+coverage.out
+coverage.html
+*.cover
+
+# Build directories
+dist/
+build/

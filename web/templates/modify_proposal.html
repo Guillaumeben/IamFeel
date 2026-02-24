@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Modification Proposal</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>🥊 IamFeel</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history">History</a>
+                <a href="/users">Users</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Modification Proposal for {{.DayName}}</h2>
+            <p>Week of {{.CurrentWeek}}</p>
+        </div>
+
+        <section class="proposal-section">
+            <div class="modification-context">
+                <h3>Your Request</h3>
+                <p><strong>Day:</strong> {{.DayName}}</p>
+                <p><strong>Reason:</strong> {{.ModificationReason}}</p>
+            </div>
+
+            <div class="proposal-comparison">
+                <div class="proposal-new">
+                    <h3>✨ Proposed New Plan</h3>
+                    <div class="plan-box">
+                        <pre>{{.NewDayPlan}}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="proposal-actions">
+                <form action="/plan/modify/accept" method="POST" style="display: inline;">
+                    <input type="hidden" name="day_name" value="{{.DayName}}">
+                    <input type="hidden" name="new_day_plan" value="{{.NewDayPlan}}">
+                    <button type="submit" class="btn btn-primary">Accept & Update Plan</button>
+                </form>
+                <a href="/plan/modify?day={{.DayName}}" class="btn btn-secondary">Try Again</a>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+
+            <details class="original-plan-details">
+                <summary>View Original Full Plan</summary>
+                <pre>{{.OriginalPlan}}</pre>
+            </details>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+</body>
+</html>
