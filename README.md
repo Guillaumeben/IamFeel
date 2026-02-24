@@ -1,6 +1,6 @@
 # IamFeel
 
-AI-powered training assistant for personalized sport session planning. Built with Go and Claude AI.
+AI-powered training assistant for personalized sport session planning. Built with Go and Claude.
 
 ## What is this?
 
@@ -171,23 +171,14 @@ For others wanting to adapt this for their sport:
 3. Run onboarding with your sport config
 4. Adjust prompts in `internal/agent/prompts.go` if needed
 
-## Inspiration
-
-Inspired by [Dungeons and Agents](https://github.com/Frichetten/Dungeons-and-Agents) - using Claude to orchestrate complex, stateful interactions.
-
 ## License
 
 MIT License - see LICENSE file
 
 ## Roadmap Highlights
 
-- **Phase 1-2:** Foundation + Onboarding ← *Current*
-- **Phase 3-4:** Agent + Plan Generation
-- **Phase 5-6:** Web UI + Chat
-- **Phase 7-8:** History Tracking + Polish
-
 See [docs/PLAN.md](docs/PLAN.md) for complete roadmap.
 
 ---
 
-Built with 🥊 for better training.
+Built with for better training.
