@@ -11,6 +11,7 @@ type UsersData struct {
     CurrentUser *UserInfo
     AllUsers    []*UserInfo
     ThemeClass  string
+    SportIcon   string
 }
 
 // UserInfo holds display information for a user
@@ -59,6 +60,7 @@ func (s *Server) HandleUsers(w http.ResponseWriter, r *http.Request) {
         },
         AllUsers:   usersInfo,
         ThemeClass: s.GetThemeClass(currentUser.ID),
+        SportIcon:  s.GetSportIconForUser(currentUser.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "users.html", data); err != nil {

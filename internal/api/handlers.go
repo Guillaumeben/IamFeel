@@ -16,16 +16,17 @@ import (
 
 // DashboardData holds data for the dashboard template
 type DashboardData struct {
-    UserName        string
-    CurrentWeek     string
-    CurrentDateTime string
-    Plan            *db.WeeklyPlan
-    TodayDate       string
-    Sessions        []*db.TrainingSession
-    PlannedSessions []*db.TrainingSession
-    Supplements     []config.Supplement
+    UserName          string
+    CurrentWeek       string
+    CurrentDateTime   string
+    Plan              *db.WeeklyPlan
+    TodayDate         string
+    Sessions          []*db.TrainingSession
+    PlannedSessions   []*db.TrainingSession
+    Supplements       []config.Supplement
     AIRecommendations string
-    ThemeClass      string
+    ThemeClass        string
+    SportIcon         string
 }
 
 // HandleDashboard renders the main dashboard
@@ -84,6 +85,7 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
         Supplements:       supplements,
         AIRecommendations: "Stay consistent with your training schedule. Focus on recovery between intense sessions.",
         ThemeClass:        s.GetThemeClass(user.ID),
+        SportIcon:         s.GetSportIconForUser(user.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "dashboard.html", data); err != nil {
@@ -97,6 +99,7 @@ type HistoryData struct {
     UserName   string
     Sessions   []*db.TrainingSession
     ThemeClass string
+    SportIcon  string
 }
 
 // HandleHistory renders the training history page
@@ -120,6 +123,7 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         UserName:   user.Name,
         Sessions:   sessions,
         ThemeClass: s.GetThemeClass(user.ID),
+        SportIcon:  s.GetSportIconForUser(user.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "history.html", data); err != nil {
@@ -225,6 +229,7 @@ type ModifyDayData struct {
     DayName     string
     Days        []string
     ThemeClass  string
+    SportIcon   string
 }
 
 // HandleModifyDayForm shows the form to modify a day
@@ -258,6 +263,7 @@ func (s *Server) HandleModifyDayForm(w http.ResponseWriter, r *http.Request) {
         DayName:     dayName,
         Days:        days,
         ThemeClass:  s.GetThemeClass(user.ID),
+        SportIcon:   s.GetSportIconForUser(user.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "modify_day.html", data); err != nil {
@@ -275,6 +281,7 @@ type ModifyDayProposalData struct {
     NewDayPlan         string
     OriginalPlan       string
     ThemeClass         string
+    SportIcon          string
 }
 
 // HandleModifyDayRequest generates a modified day plan
@@ -346,6 +353,7 @@ func (s *Server) HandleModifyDayRequest(w http.ResponseWriter, r *http.Request) 
         NewDayPlan:         newDay,
         OriginalPlan:       plan.PlanData,
         ThemeClass:         s.GetThemeClass(user.ID),
+        SportIcon:          s.GetSportIconForUser(user.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "modify_proposal.html", data); err != nil {
@@ -600,6 +608,7 @@ type SettingsData struct {
     Success    bool
     Error      string
     ThemeClass string
+    SportIcon  string
 }
 
 // HandleSettings displays the settings page
@@ -611,18 +620,61 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Load user config
+    // Load user config, or create default if doesn't exist
     userConfig, err := s.GetUserConfig(user.ID)
     if err != nil {
-        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
-        log.Printf("Error loading user config: %v", err)
-        return
+        // Create a minimal default config
+        userConfig = &config.UserConfig{
+            User: config.UserProfile{
+                Name:            user.Name,
+                Age:             user.Age,
+                Weight:          user.Weight,
+                Height:          user.Height,
+                ExperienceLevel: user.ExperienceLevel,
+            },
+            Sports: []config.UserSport{
+                {
+                    Name:    "boxing",
+                    Primary: true,
+                },
+            },
+            Equipment: config.EquipmentAccess{
+                Home: []string{},
+                Gyms: []config.Gym{},
+            },
+            Availability: make(map[string]config.DayAvailability),
+            Goals: config.Goals{
+                ShortTerm:  []string{},
+                MediumTerm: []string{},
+                LongTerm:   []string{},
+            },
+            Fitness:     &config.FitnessBaseline{},
+            Supplements: []config.Supplement{},
+            Preferences: config.UserPreferences{
+                SessionsPerWeek:   3,
+                PreferredDuration: 60,
+            },
+            Coach: config.CoachSettings{
+                Model:             "claude-3-5-sonnet-20241022",
+                Temperature:       0.7,
+                CoachingStyle:     "motivational",
+                ExplanationDetail: "balanced",
+            },
+            Tracking: config.TrackingSettings{
+                HistoryMonths:    6,
+                TrackSupplements: true,
+                TrackSleep:       false,
+                TrackWeight:      false,
+            },
+        }
+        log.Printf("Created default config for user %d", user.ID)
     }
 
     data := SettingsData{
         User:       user,
         Config:     userConfig,
         ThemeClass: s.GetThemeClass(user.ID),
+        SportIcon:  s.GetSportIconForUser(user.ID),
     }
 
     if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
@@ -646,12 +698,54 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Load user config
+    // Load user config, or create default if doesn't exist
     userConfig, err := s.GetUserConfig(user.ID)
     if err != nil {
-        http.Error(w, "Failed to load user config", http.StatusInternalServerError)
-        log.Printf("Error loading user config: %v", err)
-        return
+        // Create a minimal default config
+        userConfig = &config.UserConfig{
+            User: config.UserProfile{
+                Name:            user.Name,
+                Age:             user.Age,
+                Weight:          user.Weight,
+                Height:          user.Height,
+                ExperienceLevel: user.ExperienceLevel,
+            },
+            Sports: []config.UserSport{
+                {
+                    Name:    "boxing",
+                    Primary: true,
+                },
+            },
+            Equipment: config.EquipmentAccess{
+                Home: []string{},
+                Gyms: []config.Gym{},
+            },
+            Availability: make(map[string]config.DayAvailability),
+            Goals: config.Goals{
+                ShortTerm:  []string{},
+                MediumTerm: []string{},
+                LongTerm:   []string{},
+            },
+            Fitness:     &config.FitnessBaseline{},
+            Supplements: []config.Supplement{},
+            Preferences: config.UserPreferences{
+                SessionsPerWeek:   3,
+                PreferredDuration: 60,
+            },
+            Coach: config.CoachSettings{
+                Model:             "claude-3-5-sonnet-20241022",
+                Temperature:       0.7,
+                CoachingStyle:     "motivational",
+                ExplanationDetail: "balanced",
+            },
+            Tracking: config.TrackingSettings{
+                HistoryMonths:    6,
+                TrackSupplements: true,
+                TrackSleep:       false,
+                TrackWeight:      false,
+            },
+        }
+        log.Printf("Created default config for user %d during save", user.ID)
     }
 
     // Update user profile
@@ -690,6 +784,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
             Config:     userConfig,
             Error:      fmt.Sprintf("Failed to update user: %v", err),
             ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
@@ -864,6 +959,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
             Config:     userConfig,
             Error:      fmt.Sprintf("Failed to save settings: %v", err),
             ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
@@ -875,6 +971,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         Config:     userConfig,
         Success:    true,
         ThemeClass: s.GetThemeClass(user.ID),
+        SportIcon:  s.GetSportIconForUser(user.ID),
     }
     if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
         http.Error(w, "Failed to render settings", http.StatusInternalServerError)
@@ -959,6 +1056,7 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
             Config:     userConfig,
             Error:      errorMsg,
             ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
@@ -974,6 +1072,7 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
             Config:     userConfig,
             Error:      fmt.Sprintf("Failed to generate plan: %v", err),
             ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
@@ -987,6 +1086,7 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
             Config:     userConfig,
             Error:      fmt.Sprintf("Failed to save plan: %v", err),
             ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return

@@ -29,3 +29,44 @@ func NewServer(database *db.DB) *Server {
 func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
     return config.LoadUserConfigByID(userID)
 }
+
+// GetSportIcon returns the emoji icon for a given sport
+func GetSportIcon(sport string) string {
+    switch sport {
+    case "boxing":
+        return "🥊"
+    case "fitness":
+        return "💪"
+    case "running":
+        return "🏃"
+    case "bjj":
+        return "🥋"
+    case "cycling":
+        return "🚴"
+    case "swimming":
+        return "🏊"
+    case "crossfit":
+        return "🏋️"
+    default:
+        return "🥊" // Default to boxing
+    }
+}
+
+// GetSportIconForUser returns the sport icon for a user
+func (s *Server) GetSportIconForUser(userID int) string {
+    // Get user's primary sport from database
+    sports, err := s.db.GetUserSports(userID)
+    if err != nil || len(sports) == 0 {
+        return "🥊" // Default to boxing
+    }
+
+    // Find primary sport
+    for _, sport := range sports {
+        if sport.IsPrimary {
+            return GetSportIcon(sport.SportName)
+        }
+    }
+
+    // If no primary, use first sport
+    return GetSportIcon(sports[0].SportName)
+}

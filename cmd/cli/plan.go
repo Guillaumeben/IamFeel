@@ -19,7 +19,7 @@ func runPlanGeneration() error {
 
     // Check if user config exists
     if _, err := os.Stat(defaultUserConfigPath); os.IsNotExist(err) {
-        return fmt.Errorf("user configuration not found. Please run 'iamfeel onboard' first")
+        return fmt.Errorf("user configuration not found. Please configure your profile in the web dashboard Settings page first")
     }
 
     // Check if ANTHROPIC_API_KEY is set

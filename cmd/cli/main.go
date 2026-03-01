@@ -5,6 +5,11 @@ import (
     "os"
 )
 
+const (
+    defaultUserConfigPath = "data/user_config.yaml"
+    defaultDBPath         = "data/coach.db"
+)
+
 func main() {
     if len(os.Args) < 2 {
         printUsage()
@@ -14,11 +19,6 @@ func main() {
     command := os.Args[1]
 
     switch command {
-    case "onboard":
-        if err := runOnboarding(); err != nil {
-            fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-            os.Exit(1)
-        }
     case "plan":
         if err := runPlanGeneration(); err != nil {
             fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -41,11 +41,9 @@ func printUsage() {
     fmt.Println("  iamfeel <command> [arguments]")
     fmt.Println()
     fmt.Println("Commands:")
-    fmt.Println("  onboard    Run the onboarding wizard to set up your profile")
     fmt.Println("  plan       Generate a training plan")
     fmt.Println("  help       Show this help message")
     fmt.Println()
     fmt.Println("Examples:")
-    fmt.Println("  iamfeel onboard")
     fmt.Println("  iamfeel plan")
 }

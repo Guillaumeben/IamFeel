@@ -9,7 +9,7 @@
 <body class="{{.ThemeClass}}">
     <header>
         <div class="container">
-            <h1>🥊 IamFeel</h1>
+            <h1>{{.SportIcon}} IamFeel</h1>
             <nav>
                 <a href="/" class="active">Dashboard</a>
                 <a href="/history">History</a>
@@ -45,32 +45,32 @@
                 <p>{{.Plan.Rationale}}</p>
             </div>
             {{end}}
+
+            {{if .AIRecommendations}}
+            <!-- AI Coach Recommendations
+                 Future implementation: Generate personalized recommendations based on:
+                 - User goals (short-term, medium-term, long-term)
+                 - Current supplements and nutrition
+                 - Recent workout performance (weights lifted, perceived effort)
+                 - Performance notes from completed sessions
+                 - Skip reasons and patterns
+                 - Recovery status and fatigue indicators
+                 - Phase progression and periodization
+            -->
+            <div class="ai-recommendations-inline">
+                <h4>🤖 AI Coach Recommendations</h4>
+                <div class="recommendations-content">
+                    <p>{{.AIRecommendations}}</p>
+                </div>
+            </div>
+            {{end}}
         </section>
         {{else}}
         <section class="no-plan">
             <div class="empty-state">
                 <h3>No plan for this week</h3>
-                <p>Generate your weekly training plan using the CLI:</p>
-                <code>iamfeel plan</code>
-            </div>
-        </section>
-        {{end}}
-
-        {{if .AIRecommendations}}
-        <!-- AI Coach Recommendations
-             Future implementation: Generate personalized recommendations based on:
-             - User goals (short-term, medium-term, long-term)
-             - Current supplements and nutrition
-             - Recent workout performance (weights lifted, perceived effort)
-             - Performance notes from completed sessions
-             - Skip reasons and patterns
-             - Recovery status and fatigue indicators
-             - Phase progression and periodization
-        -->
-        <section class="ai-recommendations">
-            <h3>🤖 AI Coach Recommendations</h3>
-            <div class="recommendations-content">
-                <p>{{.AIRecommendations}}</p>
+                <p>Configure your profile and generate your plan:</p>
+                <a href="/settings" class="btn btn-primary">Go to Settings</a>
             </div>
         </section>
         {{end}}
@@ -88,6 +88,11 @@
                         </div>
                         <div class="planned-meta">
                             {{if .DurationMinutes}}<span>⏱️ {{.DurationMinutes}} min</span>{{end}}
+                            {{if not .Completed}}{{if not .Skipped}}
+                            <a href="/calendar/export/session?id={{.ID}}" class="btn-calendar-icon" title="Add to calendar" download="workout-{{.SessionDate.Format "2006-01-02"}}.ics">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zM7 12h5v5H7z"/></svg>
+                            </a>
+                            {{end}}{{end}}
                         </div>
                     </div>
                     {{if .Notes}}

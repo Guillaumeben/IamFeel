@@ -9,7 +9,7 @@
 <body class="{{.ThemeClass}}">
     <header>
         <div class="container">
-            <h1>🥊 IamFeel</h1>
+            <h1>{{.SportIcon}} IamFeel</h1>
             <nav>
                 <a href="/">Dashboard</a>
                 <a href="/history">History</a>
@@ -96,10 +96,13 @@
                         <select id="primary_sport" name="primary_sport" required>
                             {{$primarySport := ""}}
                             {{range .Config.Sports}}{{if .Primary}}{{$primarySport = .Name}}{{end}}{{end}}
-                            <option value="boxing" {{if eq $primarySport "boxing"}}selected{{end}}>Boxing</option>
-                            <option value="muay_thai" {{if eq $primarySport "muay_thai"}}selected{{end}}>Muay Thai</option>
-                            <option value="mma" {{if eq $primarySport "mma"}}selected{{end}}>MMA</option>
-                            <option value="kickboxing" {{if eq $primarySport "kickboxing"}}selected{{end}}>Kickboxing</option>
+                            <option value="boxing" {{if eq $primarySport "boxing"}}selected{{end}}>Boxing 🥊</option>
+                            <option value="fitness" {{if eq $primarySport "fitness"}}selected{{end}}>Fitness 💪</option>
+                            <option value="running" {{if eq $primarySport "running"}}selected{{end}}>Running 🏃</option>
+                            <option value="bjj" {{if eq $primarySport "bjj"}}selected{{end}}>BJJ 🥋</option>
+                            <option value="cycling" {{if eq $primarySport "cycling"}}selected{{end}}>Cycling 🚴</option>
+                            <option value="swimming" {{if eq $primarySport "swimming"}}selected{{end}}>Swimming 🏊</option>
+                            <option value="crossfit" {{if eq $primarySport "crossfit"}}selected{{end}}>CrossFit 🏋️</option>
                         </select>
                     </div>
 

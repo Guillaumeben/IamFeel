@@ -36,8 +36,7 @@ func main() {
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
     r.Use(middleware.Compress(5))
-    r.Use(server.UserMiddleware)      // User session management
-    r.Use(server.OnboardingMiddleware) // Redirect to onboarding if no config
+    r.Use(server.UserMiddleware) // User session management
 
     // Static files
     fileServer := http.FileServer(http.Dir("web/static"))
@@ -62,9 +61,9 @@ func main() {
     r.Post("/users/create", server.HandleCreateUser)
     r.Post("/users/switch", server.HandleSwitchUser)
 
-    // Onboarding routes
-    r.Get("/onboard", server.HandleOnboarding)
-    r.Post("/onboard", server.HandleOnboardingSubmit)
+    // Calendar export routes
+    r.Get("/calendar/export", server.HandleCalendarExport)
+    r.Get("/calendar/export/session", server.HandleSessionCalendarExport)
 
     // Get port from environment or use default
     port := os.Getenv("PORT")
