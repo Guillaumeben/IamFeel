@@ -706,6 +706,24 @@ type SettingsData struct {
     AIUsageLimit  int
 }
 
+// NewSettingsData creates a SettingsData struct with common fields populated
+func (s *Server) NewSettingsData(user *db.User, userConfig *config.UserConfig) SettingsData {
+    aiUsageCount, err := s.db.GetDailyAIUsage(user.ID, time.Now())
+    if err != nil {
+        log.Printf("Warning: Failed to get AI usage: %v", err)
+        aiUsageCount = 0
+    }
+
+    return SettingsData{
+        User:         user,
+        Config:       userConfig,
+        ThemeClass:   s.GetThemeClass(user.ID),
+        SportIcon:    s.GetSportIconForUser(user.ID),
+        AIUsageCount: aiUsageCount,
+        AIUsageLimit: DailyAICallLimit,
+    }
+}
+
 // HandleSettings displays the settings page
 func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
     user, err := GetCurrentUser(r)
@@ -765,21 +783,7 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
         log.Printf("Created default config for user %d", user.ID)
     }
 
-    // Get AI usage count for today
-    aiUsageCount, err := s.db.GetDailyAIUsage(user.ID, time.Now())
-    if err != nil {
-        log.Printf("Warning: Failed to get AI usage: %v", err)
-        aiUsageCount = 0
-    }
-
-    data := SettingsData{
-        User:         user,
-        Config:       userConfig,
-        ThemeClass:   s.GetThemeClass(user.ID),
-        SportIcon:    s.GetSportIconForUser(user.ID),
-        AIUsageCount: aiUsageCount,
-        AIUsageLimit: DailyAICallLimit,
-    }
+    data := s.NewSettingsData(user, userConfig)
 
     if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
         http.Error(w, "Failed to render settings", http.StatusInternalServerError)
@@ -883,15 +887,8 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     // Update user in database
     if err := s.db.UpdateUser(user); err != nil {
         log.Printf("Failed to update user: %v", err)
-        data := SettingsData{
-            User:         user,
-            Config:       userConfig,
-            Error:        fmt.Sprintf("Failed to update user: %v", err),
-            ThemeClass:   s.GetThemeClass(user.ID),
-            SportIcon:    s.GetSportIconForUser(user.ID),
-            AIUsageCount: 0,
-            AIUsageLimit: DailyAICallLimit,
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to update user: %v", err)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
@@ -1060,25 +1057,15 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     // Save to per-user config file
     if err := config.SaveUserConfigByID(user.ID, userConfig); err != nil {
         log.Printf("Failed to save config: %v", err)
-        data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      fmt.Sprintf("Failed to save settings: %v", err),
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to save settings: %v", err)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
 
     // Redirect back to settings with success message
-    data := SettingsData{
-        User:       user,
-        Config:     userConfig,
-        Success:    true,
-        ThemeClass: s.GetThemeClass(user.ID),
-        SportIcon:  s.GetSportIconForUser(user.ID),
-    }
+    data := s.NewSettingsData(user, userConfig)
+    data.Success = true
     if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
         http.Error(w, "Failed to render settings", http.StatusInternalServerError)
         log.Printf("Template error: %v", err)
@@ -1157,13 +1144,8 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
         for _, err := range validationErrors {
             errorMsg += "• " + err + "\n"
         }
-        data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      errorMsg,
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = errorMsg
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
@@ -1176,13 +1158,8 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
         return
     }
     if !withinLimit {
-        data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow.", currentCount, DailyAICallLimit),
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow.", currentCount, DailyAICallLimit)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
@@ -1192,13 +1169,8 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
     planText, err := agent.GenerateWeeklyPlan(r.Context(), s.db, userConfig, weekStart)
     if err != nil {
         log.Printf("Failed to generate plan: %v", err)
-        data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      fmt.Sprintf("Failed to generate plan: %v", err),
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to generate plan: %v", err)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
@@ -1206,13 +1178,8 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
     // Save plan
     if err := agent.SaveWeeklyPlan(s.db, user.ID, weekStart, planText); err != nil {
         log.Printf("Failed to save plan: %v", err)
-        data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      fmt.Sprintf("Failed to save plan: %v", err),
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
-        }
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to save plan: %v", err)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
@@ -1353,13 +1320,8 @@ func (s *Server) HandleCopyPreviousWeek(w http.ResponseWriter, r *http.Request) 
             return
         }
         if !withinLimit {
-            data := SettingsData{
-                User:       user,
-                Config:     userConfig,
-                Error:      fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow or copy without AI adjustment.", currentCount, DailyAICallLimit),
-                ThemeClass: s.GetThemeClass(user.ID),
-                SportIcon:  s.GetSportIconForUser(user.ID),
-            }
+            data := s.NewSettingsData(user, userConfig)
+            data.Error = fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow or copy without AI adjustment.", currentCount, DailyAICallLimit)
             s.templates.ExecuteTemplate(w, "settings.html", data)
             return
         }
