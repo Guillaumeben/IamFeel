@@ -1,6 +1,7 @@
 package api
 
 import (
+    "fmt"
     "html/template"
     "path/filepath"
 
@@ -16,8 +17,22 @@ type Server struct {
 
 // NewServer creates a new server instance
 func NewServer(database *db.DB) *Server {
-    // Load templates
-    templates := template.Must(template.ParseGlob(filepath.Join("web", "templates", "*.html")))
+    // Create template functions
+    funcMap := template.FuncMap{
+        "Iterate": func(n int) []int {
+            result := make([]int, n)
+            for i := 0; i < n; i++ {
+                result[i] = i + 1
+            }
+            return result
+        },
+        "printf": func(format string, args ...interface{}) string {
+            return fmt.Sprintf(format, args...)
+        },
+    }
+
+    // Load templates with custom functions
+    templates := template.Must(template.New("").Funcs(funcMap).ParseGlob(filepath.Join("web", "templates", "*.html")))
 
     return &Server{
         db:        database,

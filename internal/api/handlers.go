@@ -96,10 +96,16 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // HistoryData holds data for the history page
 type HistoryData struct {
-    UserName   string
-    Sessions   []*db.TrainingSession
-    ThemeClass string
-    SportIcon  string
+    UserName        string
+    Sessions        []*db.TrainingSession
+    ThemeClass      string
+    SportIcon       string
+    FilterStart     string
+    FilterEnd       string
+    FilterType      string
+    FilterMinEffort string
+    FilterMaxEffort string
+    HasFilters      bool
 }
 
 // HandleHistory renders the training history page
@@ -111,8 +117,41 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Get last 50 past sessions (only sessions before today)
-    sessions, err := s.db.GetPastTrainingSessions(user.ID, 50)
+    // Parse filter parameters from query string
+    startDate := r.URL.Query().Get("start_date")
+    endDate := r.URL.Query().Get("end_date")
+    sessionType := r.URL.Query().Get("session_type")
+    minEffortStr := r.URL.Query().Get("min_effort")
+    maxEffortStr := r.URL.Query().Get("max_effort")
+
+    // Convert effort strings to integers
+    var minEffort, maxEffort int
+    if minEffortStr != "" {
+        fmt.Sscanf(minEffortStr, "%d", &minEffort)
+    }
+    if maxEffortStr != "" {
+        fmt.Sscanf(maxEffortStr, "%d", &maxEffort)
+    }
+
+    // Check if any filters are applied
+    hasFilters := startDate != "" || endDate != "" || sessionType != "" || minEffortStr != "" || maxEffortStr != ""
+
+    var sessions []*db.TrainingSession
+    if hasFilters {
+        // Use filtered query
+        filters := db.SessionFilters{
+            StartDate:   startDate,
+            EndDate:     endDate,
+            SessionType: sessionType,
+            MinEffort:   minEffort,
+            MaxEffort:   maxEffort,
+        }
+        sessions, err = s.db.GetFilteredTrainingSessions(user.ID, filters, 100)
+    } else {
+        // Use default query (last 50 past sessions)
+        sessions, err = s.db.GetPastTrainingSessions(user.ID, 50)
+    }
+
     if err != nil {
         http.Error(w, "Failed to load sessions", http.StatusInternalServerError)
         log.Printf("Error loading sessions: %v", err)
@@ -120,10 +159,16 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
     }
 
     data := HistoryData{
-        UserName:   user.Name,
-        Sessions:   sessions,
-        ThemeClass: s.GetThemeClass(user.ID),
-        SportIcon:  s.GetSportIconForUser(user.ID),
+        UserName:        user.Name,
+        Sessions:        sessions,
+        ThemeClass:      s.GetThemeClass(user.ID),
+        SportIcon:       s.GetSportIconForUser(user.ID),
+        FilterStart:     startDate,
+        FilterEnd:       endDate,
+        FilterType:      sessionType,
+        FilterMinEffort: minEffortStr,
+        FilterMaxEffort: maxEffortStr,
+        HasFilters:      hasFilters,
     }
 
     if err := s.templates.ExecuteTemplate(w, "history.html", data); err != nil {

@@ -25,6 +25,58 @@
             <p>Your recent training sessions</p>
         </div>
 
+        <section class="filter-section">
+            <form action="/history" method="GET" class="filter-form">
+                <div class="filter-header">
+                    <h3>🔍 Filter Sessions</h3>
+                    {{if .HasFilters}}
+                    <a href="/history" class="btn btn-secondary btn-sm">Clear Filters</a>
+                    {{end}}
+                </div>
+
+                <div class="filter-grid">
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" value="{{.FilterStart}}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" value="{{.FilterEnd}}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="session_type">Session Type</label>
+                        <input type="text" id="session_type" name="session_type" value="{{.FilterType}}" placeholder="e.g., Sparring, Cardio">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="min_effort">Min Effort</label>
+                        <select id="min_effort" name="min_effort">
+                            <option value="">Any</option>
+                            {{range $i := Iterate 10}}
+                            <option value="{{$i}}" {{if eq $.FilterMinEffort (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max_effort">Max Effort</label>
+                        <select id="max_effort" name="max_effort">
+                            <option value="">Any</option>
+                            {{range $i := Iterate 10}}
+                            <option value="{{$i}}" {{if eq $.FilterMaxEffort (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+
+                    <div class="form-group filter-actions">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
         {{if .Sessions}}
         <div class="history-list">
             {{range .Sessions}}

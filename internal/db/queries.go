@@ -252,6 +252,86 @@ func (db *DB) GetPastTrainingSessions(userID int, limit int) ([]*TrainingSession
     return sessions, nil
 }
 
+// SessionFilters holds optional filter parameters for querying training sessions
+type SessionFilters struct {
+    StartDate    string // YYYY-MM-DD format
+    EndDate      string // YYYY-MM-DD format
+    SessionType  string
+    MinEffort    int
+    MaxEffort    int
+}
+
+// GetFilteredTrainingSessions returns training sessions filtered by the given criteria
+func (db *DB) GetFilteredTrainingSessions(userID int, filters SessionFilters, limit int) ([]*TrainingSession, error) {
+    query := `
+        SELECT id, user_id, sport_id, session_date, session_type, duration_minutes,
+               perceived_effort, notes, performance_notes, skipped, skip_reason, completed, planned, created_at, updated_at
+        FROM training_sessions
+        WHERE user_id = ?
+    `
+
+    args := []interface{}{userID}
+
+    // Add date range filter
+    if filters.StartDate != "" {
+        query += " AND session_date >= ?"
+        args = append(args, filters.StartDate)
+    }
+    if filters.EndDate != "" {
+        query += " AND session_date <= ?"
+        args = append(args, filters.EndDate)
+    }
+
+    // Add session type filter (case-insensitive)
+    if filters.SessionType != "" {
+        query += " AND LOWER(session_type) LIKE LOWER(?)"
+        args = append(args, "%"+filters.SessionType+"%")
+    }
+
+    // Add effort level filter
+    if filters.MinEffort > 0 {
+        query += " AND perceived_effort >= ?"
+        args = append(args, filters.MinEffort)
+    }
+    if filters.MaxEffort > 0 && filters.MaxEffort <= 10 {
+        query += " AND perceived_effort <= ?"
+        args = append(args, filters.MaxEffort)
+    }
+
+    query += `
+        ORDER BY session_date DESC, created_at DESC
+        LIMIT ?
+    `
+    args = append(args, limit)
+
+    rows, err := db.conn.Query(query, args...)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query filtered training sessions: %w", err)
+    }
+    defer rows.Close()
+
+    var sessions []*TrainingSession
+    for rows.Next() {
+        var session TrainingSession
+        err := rows.Scan(
+            &session.ID, &session.UserID, &session.SportID, &session.SessionDate,
+            &session.SessionType, &session.DurationMinutes, &session.PerceivedEffort,
+            &session.Notes, &session.PerformanceNotes, &session.Skipped, &session.SkipReason,
+            &session.Completed, &session.Planned, &session.CreatedAt, &session.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan training session: %w", err)
+        }
+        sessions = append(sessions, &session)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("error iterating training sessions: %w", err)
+    }
+
+    return sessions, nil
+}
+
 // UpdateTrainingSession updates an existing training session
 func (db *DB) UpdateTrainingSession(session *TrainingSession) error {
     query := `

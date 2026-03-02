@@ -313,21 +313,30 @@
 
             <!-- Equipment & Gyms Tab -->
             <div id="equipment-tab" class="tab-content">
-            <!-- Home Equipment Section -->
+            <!-- Available Equipment Section -->
             <section class="settings-section">
-                <h3>🏠 Home Equipment</h3>
-                <p class="section-description">Equipment available at your home/garage gym</p>
+                <h3>💪 Available Equipment</h3>
+                <p class="section-description">List all equipment you have access to for self-directed workouts (at home, gym, or anywhere else)</p>
+
+                <div style="background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        💡 Quick-add common equipment for your sport
+                    </p>
+                    <button type="button" onclick="addCommonEquipment()" class="btn btn-secondary btn-sm">
+                        ⚡ Add Common Equipment for My Sport
+                    </button>
+                </div>
 
                 <div id="home-equipment-list">
                     {{range $index, $item := .Config.Equipment.Home}}
                     <div class="equipment-item">
-                        <input type="text" name="home_equipment[]" value="{{$item}}" placeholder="e.g., Heavy bag, Jump rope">
+                        <input type="text" name="home_equipment[]" value="{{$item}}" placeholder="e.g., Barbell, Pull-up bar, Heavy bag">
                         <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
                     </div>
                     {{end}}
                     {{if not .Config.Equipment.Home}}
                     <div class="equipment-item">
-                        <input type="text" name="home_equipment[]" value="" placeholder="e.g., Heavy bag, Jump rope">
+                        <input type="text" name="home_equipment[]" value="" placeholder="e.g., Barbell, Pull-up bar, Heavy bag">
                         <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
                     </div>
                     {{end}}
@@ -339,7 +348,7 @@
             <!-- Gyms/Clubs Section -->
             <section class="settings-section">
                 <h3>🏋️ Gyms & Clubs</h3>
-                <p class="section-description">Your gym memberships and their available sessions</p>
+                <p class="section-description">Structured classes and sessions you want to attend (with specific schedules and costs)</p>
 
                 <div id="gyms-list">
                     {{range $gymIndex, $gym := .Config.Equipment.Gyms}}
@@ -418,12 +427,118 @@
     <script>
         let gymCounter = {{if .Config.Equipment.Gyms}}{{len .Config.Equipment.Gyms}}{{else}}0{{end}};
 
+        // Equipment templates by sport
+        const equipmentTemplates = {
+            boxing: [
+                'Heavy bag',
+                'Speed bag',
+                'Jump rope',
+                'Hand wraps',
+                'Boxing gloves',
+                'Focus mitts',
+                'Double-end bag',
+                'Reflex bag'
+            ],
+            fitness: [
+                'Barbell',
+                'Dumbbells',
+                'Resistance bands',
+                'Bench',
+                'Squat rack',
+                'Pull-up bar',
+                'Kettlebells',
+                'Yoga mat'
+            ],
+            running: [
+                'Running shoes',
+                'GPS watch',
+                'Heart rate monitor',
+                'Foam roller',
+                'Compression socks',
+                'Hydration vest',
+                'Running belt',
+                'Headlamp'
+            ],
+            bjj: [
+                'Gi',
+                'Rashguard',
+                'Grappling dummy',
+                'Mouthguard',
+                'Knee pads',
+                'Yoga mat',
+                'Foam roller',
+                'Resistance bands'
+            ],
+            cycling: [
+                'Road bike',
+                'Helmet',
+                'Cycling shoes',
+                'Bike computer',
+                'Bike trainer',
+                'Repair kit',
+                'Cycling shorts',
+                'Water bottles'
+            ],
+            swimming: [
+                'Goggles',
+                'Swim cap',
+                'Pull buoy',
+                'Kickboard',
+                'Fins',
+                'Hand paddles',
+                'Snorkel',
+                'Resistance bands'
+            ],
+            crossfit: [
+                'Barbell',
+                'Weight plates',
+                'Kettlebells',
+                'Pull-up bar',
+                'Rowing machine',
+                'Jump rope',
+                'Medicine ball',
+                'Plyo box'
+            ]
+        };
+
+        function addCommonEquipment() {
+            // Get the selected sport
+            const sportSelect = document.getElementById('primary_sport');
+            const sport = sportSelect ? sportSelect.value : 'boxing';
+
+            // Get equipment template for the sport
+            const equipment = equipmentTemplates[sport] || [];
+
+            if (equipment.length === 0) {
+                alert('No equipment template found for this sport');
+                return;
+            }
+
+            // Add each equipment item
+            const list = document.getElementById('home-equipment-list');
+            equipment.forEach(item => {
+                // Check if this item already exists
+                const existing = Array.from(list.querySelectorAll('input[name="home_equipment[]"]'))
+                    .some(input => input.value.toLowerCase() === item.toLowerCase());
+
+                if (!existing) {
+                    const div = document.createElement('div');
+                    div.className = 'equipment-item';
+                    div.innerHTML = `
+                        <input type="text" name="home_equipment[]" value="${item}" placeholder="e.g., Heavy bag, Jump rope">
+                        <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
+                    `;
+                    list.appendChild(div);
+                }
+            });
+        }
+
         function addHomeEquipment() {
             const list = document.getElementById('home-equipment-list');
             const div = document.createElement('div');
             div.className = 'equipment-item';
             div.innerHTML = `
-                <input type="text" name="home_equipment[]" value="" placeholder="e.g., Heavy bag, Jump rope">
+                <input type="text" name="home_equipment[]" value="" placeholder="e.g., Barbell, Pull-up bar, Heavy bag">
                 <button type="button" onclick="removeItem(this)" class="btn-remove">Remove</button>
             `;
             list.appendChild(div);
