@@ -205,3 +205,77 @@ func (s *Server) HandleUseTemplate(w http.ResponseWriter, r *http.Request) {
 
     http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+// HandleSaveAsTemplate converts a session into a reusable template
+func (s *Server) HandleSaveAsTemplate(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Invalid form data", http.StatusBadRequest)
+        return
+    }
+
+    sessionID, err := strconv.Atoi(r.FormValue("session_id"))
+    if err != nil {
+        http.Error(w, "Invalid session ID", http.StatusBadRequest)
+        return
+    }
+
+    // Get session
+    session, err := s.db.GetTrainingSession(sessionID)
+    if err != nil {
+        http.Error(w, "Session not found", http.StatusNotFound)
+        return
+    }
+
+    // Verify session belongs to user
+    if session.UserID != user.ID {
+        http.Error(w, "Unauthorized", http.StatusForbidden)
+        return
+    }
+
+    // Get user's primary sport name
+    sports, err := s.db.GetUserSports(user.ID)
+    sportName := "fitness" // default
+    if err == nil && len(sports) > 0 {
+        // Find primary sport
+        for _, sport := range sports {
+            if sport.IsPrimary {
+                sportName = sport.SportName
+                break
+            }
+        }
+        // If no primary, use first sport
+        if sportName == "fitness" && len(sports) > 0 {
+            sportName = sports[0].SportName
+        }
+    }
+
+    // Create template from session
+    template := &db.SessionTemplate{
+        UserID:          user.ID,
+        TemplateName:    session.SessionType,
+        SportName:       sportName,
+        SessionType:     session.SessionType,
+        DurationMinutes: session.DurationMinutes,
+        PerceivedEffort: session.PerceivedEffort,
+        Description:     session.Notes,
+    }
+
+    if err := s.db.CreateSessionTemplate(template); err != nil {
+        http.Error(w, "Failed to create template", http.StatusInternalServerError)
+        log.Printf("Error creating template from session: %v", err)
+        return
+    }
+
+    http.Redirect(w, r, "/templates", http.StatusSeeOther)
+}

@@ -49,6 +49,7 @@ func main() {
     r.Post("/templates/create", server.HandleCreateTemplate)
     r.Post("/templates/delete", server.HandleDeleteTemplate)
     r.Post("/templates/use", server.HandleUseTemplate)
+    r.Post("/templates/save", server.HandleSaveAsTemplate)
     r.Get("/settings", server.HandleSettings)
     r.Post("/settings", server.HandleSettingsSave)
     r.Post("/settings/generate-plan", server.HandleGeneratePlan)

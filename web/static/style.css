@@ -1416,3 +1416,18 @@ footer p {
     flex: 1;
     min-width: 120px;
 }
+
+/* ===== History Actions Styles ===== */
+.history-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.history-actions .btn-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}

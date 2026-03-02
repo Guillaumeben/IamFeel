@@ -120,6 +120,15 @@
                     <strong>Notes:</strong> {{.Notes}}
                 </div>
                 {{end}}
+
+                {{if and .Completed (not .Skipped)}}
+                <div class="history-actions">
+                    <form action="/templates/save" method="POST" style="display: inline;">
+                        <input type="hidden" name="session_id" value="{{.ID}}">
+                        <button type="submit" class="btn btn-secondary btn-sm">💾 Save as Template</button>
+                    </form>
+                </div>
+                {{end}}
             </div>
             {{end}}
         </div>

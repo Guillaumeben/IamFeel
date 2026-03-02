@@ -805,3 +805,38 @@ func (db *DB) DeleteSessionTemplate(templateID int) error {
 
     return nil
 }
+
+// GetTrainingSession retrieves a single training session by ID
+func (db *DB) GetTrainingSession(sessionID int) (*TrainingSession, error) {
+    query := `
+        SELECT id, user_id, session_date, session_type, duration_minutes,
+               perceived_effort, performance_notes, notes, completed, skipped,
+               skip_reason, planned, created_at, updated_at
+        FROM training_sessions
+        WHERE id = ?
+    `
+
+    session := &TrainingSession{}
+    err := db.conn.QueryRow(query, sessionID).Scan(
+        &session.ID,
+        &session.UserID,
+        &session.SessionDate,
+        &session.SessionType,
+        &session.DurationMinutes,
+        &session.PerceivedEffort,
+        &session.PerformanceNotes,
+        &session.Notes,
+        &session.Completed,
+        &session.Skipped,
+        &session.SkipReason,
+        &session.Planned,
+        &session.CreatedAt,
+        &session.UpdatedAt,
+    )
+
+    if err != nil {
+        return nil, fmt.Errorf("failed to get training session: %w", err)
+    }
+
+    return session, nil
+}
