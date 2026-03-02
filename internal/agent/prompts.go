@@ -365,3 +365,79 @@ func BuildDayModificationPrompt(userContext *UserContext, currentPlan string, da
 
     return sb.String()
 }
+
+// BuildPlanAdjustmentPrompt creates a prompt for adjusting a weekly plan
+func BuildPlanAdjustmentPrompt(userContext *UserContext, previousPlan string, adjustmentNotes string) string {
+    var sb strings.Builder
+
+    sb.WriteString("I need to create a new weekly training plan based on a previous week's plan with some adjustments.\n\n")
+
+    // User profile (condensed)
+    sb.WriteString("## Athlete Profile\n\n")
+    sb.WriteString(fmt.Sprintf("- Name: %s\n", userContext.Name))
+    sb.WriteString(fmt.Sprintf("- Experience Level: %s\n", userContext.ExperienceLevel))
+    sb.WriteString(fmt.Sprintf("- Current Phase: %s\n", userContext.CurrentPhaseName))
+    sb.WriteString("\n")
+
+    // Previous plan
+    sb.WriteString("## Previous Week's Plan\n\n")
+    sb.WriteString("This is the plan from the previous week that should be used as a baseline:\n\n")
+    sb.WriteString("```\n")
+    sb.WriteString(previousPlan)
+    sb.WriteString("\n```\n\n")
+
+    // Adjustment request
+    sb.WriteString("## Adjustment Request\n\n")
+    sb.WriteString(fmt.Sprintf("**Requested adjustments**: %s\n\n", adjustmentNotes))
+
+    // Recent training context
+    if len(userContext.RecentSessions) > 0 {
+        sb.WriteString("## Recent Training (Last 14 Days)\n\n")
+        for _, session := range userContext.RecentSessions {
+            sb.WriteString(fmt.Sprintf("- %s: %s (%d min, effort %d/10)\n",
+                session.Date, session.SessionType, session.DurationMinutes, session.PerceivedEffort))
+            if session.Notes != "" {
+                sb.WriteString(fmt.Sprintf("  Notes: %s\n", session.Notes))
+            }
+        }
+        sb.WriteString("\n")
+    }
+
+    // Weekly availability
+    sb.WriteString("## Weekly Availability\n\n")
+    for day, avail := range userContext.Availability {
+        times := []string{}
+        if avail.Morning {
+            times = append(times, "morning")
+        }
+        if avail.Lunch {
+            times = append(times, "lunch")
+        }
+        if avail.Evening {
+            times = append(times, "evening")
+        }
+        if len(times) > 0 {
+            sb.WriteString(fmt.Sprintf("- %s: %s", day, strings.Join(times, ", ")))
+        } else {
+            sb.WriteString(fmt.Sprintf("- %s: not available", day))
+        }
+        if avail.PreferredLocation != "" {
+            sb.WriteString(fmt.Sprintf(" [prefers: %s]", avail.PreferredLocation))
+        }
+        sb.WriteString("\n")
+    }
+    sb.WriteString("\n")
+
+    // Request
+    sb.WriteString("## Your Task\n\n")
+    sb.WriteString(fmt.Sprintf("Please create a NEW weekly training plan for the week of %s, based on:\n", userContext.WeekStart))
+    sb.WriteString("1. The previous week's plan structure (use it as a template)\n")
+    sb.WriteString("2. The adjustment notes provided above\n")
+    sb.WriteString("3. The athlete's recent training load and recovery status\n")
+    sb.WriteString("4. Proper progression principles (don't simply repeat - adapt and progress)\n")
+    sb.WriteString("5. The athlete's current availability\n\n")
+    sb.WriteString("Follow the standard weekly plan output format specified in the system prompt.\n")
+    sb.WriteString("Make sure to incorporate the requested adjustments while maintaining a balanced and progressive training approach.\n")
+
+    return sb.String()
+}

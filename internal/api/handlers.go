@@ -98,6 +98,7 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 type HistoryData struct {
     UserName        string
     Sessions        []*db.TrainingSession
+    RestDayNotes    []*db.RestDayNote
     ThemeClass      string
     SportIcon       string
     FilterStart     string
@@ -158,9 +159,34 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Get rest day notes (last 50 by default, or filtered by date range)
+    var restDayNotes []*db.RestDayNote
+    if hasFilters && (startDate != "" || endDate != "") {
+        // Apply date range filter
+        var start, end time.Time
+        if startDate != "" {
+            start, _ = time.Parse("2006-01-02", startDate)
+        } else {
+            start = time.Now().AddDate(-1, 0, 0) // 1 year ago
+        }
+        if endDate != "" {
+            end, _ = time.Parse("2006-01-02", endDate)
+        } else {
+            end = time.Now()
+        }
+        restDayNotes, err = s.db.GetRestDayNotes(user.ID, start, end)
+    } else {
+        restDayNotes, err = s.db.GetRecentRestDayNotes(user.ID, 50)
+    }
+    if err != nil {
+        log.Printf("Error loading rest day notes: %v", err)
+        restDayNotes = []*db.RestDayNote{}
+    }
+
     data := HistoryData{
         UserName:        user.Name,
         Sessions:        sessions,
+        RestDayNotes:    restDayNotes,
         ThemeClass:      s.GetThemeClass(user.ID),
         SportIcon:       s.GetSportIconForUser(user.ID),
         FilterStart:     startDate,
@@ -1140,5 +1166,166 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
     log.Printf("Successfully generated and saved weekly plan for user: %s (ID: %d)", user.Name, user.ID)
 
     // Redirect to dashboard to show new plan
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// HandleLogRestDay handles logging a rest day note
+func (s *Server) HandleLogRestDay(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    restDate := r.FormValue("rest_date")
+    wellnessStr := r.FormValue("wellness_rating")
+    sorenessStr := r.FormValue("soreness_level")
+    motivationStr := r.FormValue("motivation_level")
+    recoveryActivities := r.FormValue("recovery_activities")
+    notes := r.FormValue("notes")
+
+    date, err := time.Parse("2006-01-02", restDate)
+    if err != nil {
+        http.Error(w, "Invalid date format", http.StatusBadRequest)
+        return
+    }
+
+    wellness, err := strconv.Atoi(wellnessStr)
+    if err != nil || wellness < 1 || wellness > 10 {
+        http.Error(w, "Invalid wellness rating (must be 1-10)", http.StatusBadRequest)
+        return
+    }
+
+    soreness, err := strconv.Atoi(sorenessStr)
+    if err != nil || soreness < 1 || soreness > 10 {
+        http.Error(w, "Invalid soreness level (must be 1-10)", http.StatusBadRequest)
+        return
+    }
+
+    motivation, err := strconv.Atoi(motivationStr)
+    if err != nil || motivation < 1 || motivation > 10 {
+        http.Error(w, "Invalid motivation level (must be 1-10)", http.StatusBadRequest)
+        return
+    }
+
+    restDayNote := &db.RestDayNote{
+        UserID:             user.ID,
+        RestDate:           date,
+        WellnessRating:     wellness,
+        SorenessLevel:      soreness,
+        MotivationLevel:    motivation,
+        RecoveryActivities: recoveryActivities,
+        Notes:              notes,
+    }
+
+    if err := s.db.CreateRestDayNote(restDayNote); err != nil {
+        http.Error(w, "Failed to save rest day note", http.StatusInternalServerError)
+        log.Printf("Error saving rest day note: %v", err)
+        return
+    }
+
+    http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// HandleCopyPreviousWeek copies the previous week's plan to the current week
+func (s *Server) HandleCopyPreviousWeek(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    adjustWithAI := r.FormValue("adjust_with_ai") == "true"
+    adjustmentNotes := r.FormValue("adjustment_notes")
+
+    // Get current week start
+    currentWeekStart := agent.GetWeekStart(time.Now())
+
+    // Get previous week start (7 days before current week)
+    previousWeekStart := currentWeekStart.AddDate(0, 0, -7)
+
+    // Get previous week's plan
+    previousPlan, err := s.db.GetWeeklyPlan(user.ID, previousWeekStart)
+    if err != nil {
+        http.Error(w, "No plan found for previous week", http.StatusNotFound)
+        log.Printf("Error loading previous week plan: %v", err)
+        return
+    }
+
+    var newPlanData string
+    var newRationale string
+
+    if adjustWithAI && adjustmentNotes != "" {
+        // Load user config for AI adjustment
+        userConfig, err := s.GetUserConfig(user.ID)
+        if err != nil {
+            http.Error(w, "Failed to load user config", http.StatusInternalServerError)
+            log.Printf("Error loading user config: %v", err)
+            return
+        }
+
+        // Generate adjusted plan using AI
+        ctx := r.Context()
+        adjustedPlan, err := agent.AdjustWeeklyPlan(
+            ctx,
+            s.db,
+            userConfig,
+            currentWeekStart,
+            previousPlan.PlanData,
+            adjustmentNotes,
+        )
+        if err != nil {
+            http.Error(w, fmt.Sprintf("Failed to adjust plan: %v", err), http.StatusInternalServerError)
+            log.Printf("Error adjusting plan: %v", err)
+            return
+        }
+
+        newPlanData = adjustedPlan
+        newRationale = fmt.Sprintf("Adjusted from previous week with notes: %s", adjustmentNotes)
+    } else {
+        // Simple copy without AI adjustment
+        newPlanData = previousPlan.PlanData
+        newRationale = "Copied from previous week"
+    }
+
+    // Create new plan for current week
+    currentWeekEnd := currentWeekStart.AddDate(0, 0, 6)
+    newPlan := &db.WeeklyPlan{
+        UserID:        user.ID,
+        WeekStartDate: currentWeekStart,
+        WeekEndDate:   currentWeekEnd,
+        PlanData:      newPlanData,
+        Rationale:     newRationale,
+    }
+
+    if err := s.db.CreateWeeklyPlan(newPlan); err != nil {
+        http.Error(w, "Failed to save copied plan", http.StatusInternalServerError)
+        log.Printf("Error saving copied plan: %v", err)
+        return
+    }
+
+    log.Printf("Successfully copied plan from previous week for user: %s (ID: %d)", user.Name, user.ID)
     http.Redirect(w, r, "/", http.StatusSeeOther)
 }

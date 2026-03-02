@@ -77,68 +77,117 @@
             </form>
         </section>
 
-        {{if .Sessions}}
-        <div class="history-list">
-            {{range .Sessions}}
-            <div class="history-card">
-                <div class="history-header">
-                    <div>
-                        <h3>{{.SessionType}}</h3>
-                        <span class="history-date">{{.SessionDate.Format "Monday, January 2, 2006"}}</span>
+        <section class="history-section">
+            <h3>🏋️ Training Sessions</h3>
+            {{if .Sessions}}
+            <div class="history-list">
+                {{range .Sessions}}
+                <div class="history-card">
+                    <div class="history-header">
+                        <div>
+                            <h3>{{.SessionType}}</h3>
+                            <span class="history-date">{{.SessionDate.Format "Monday, January 2, 2006"}}</span>
+                        </div>
+                        <div class="history-stats">
+                            <span class="stat">
+                                <span class="stat-label">Duration</span>
+                                <span class="stat-value">{{.DurationMinutes}} min</span>
+                            </span>
+                            <span class="stat">
+                                <span class="stat-label">Effort</span>
+                                <span class="stat-value">{{.PerceivedEffort}}/10</span>
+                            </span>
+                        </div>
                     </div>
-                    <div class="history-stats">
-                        <span class="stat">
-                            <span class="stat-label">Duration</span>
-                            <span class="stat-value">{{.DurationMinutes}} min</span>
-                        </span>
-                        <span class="stat">
-                            <span class="stat-label">Effort</span>
-                            <span class="stat-value">{{.PerceivedEffort}}/10</span>
-                        </span>
+
+                    {{if .Skipped}}
+                    <div class="status-badge skipped-badge">⊘ Skipped</div>
+                    {{if .SkipReason}}
+                    <div class="skip-reason">
+                        <strong>Reason:</strong> {{.SkipReason}}
                     </div>
-                </div>
+                    {{end}}
+                    {{else if .Completed}}
+                    <div class="status-badge completed-badge">✓ Completed</div>
+                    {{end}}
 
-                {{if .Skipped}}
-                <div class="status-badge skipped-badge">⊘ Skipped</div>
-                {{if .SkipReason}}
-                <div class="skip-reason">
-                    <strong>Reason:</strong> {{.SkipReason}}
-                </div>
-                {{end}}
-                {{else if .Completed}}
-                <div class="status-badge completed-badge">✓ Completed</div>
-                {{end}}
+                    {{if .PerformanceNotes}}
+                    <div class="performance-notes">
+                        <strong>Performance:</strong> {{.PerformanceNotes}}
+                    </div>
+                    {{end}}
 
-                {{if .PerformanceNotes}}
-                <div class="performance-notes">
-                    <strong>Performance:</strong> {{.PerformanceNotes}}
-                </div>
-                {{end}}
+                    {{if .Notes}}
+                    <div class="history-notes">
+                        <strong>Notes:</strong> {{.Notes}}
+                    </div>
+                    {{end}}
 
-                {{if .Notes}}
-                <div class="history-notes">
-                    <strong>Notes:</strong> {{.Notes}}
-                </div>
-                {{end}}
-
-                {{if and .Completed (not .Skipped)}}
-                <div class="history-actions">
-                    <form action="/templates/save" method="POST" style="display: inline;">
-                        <input type="hidden" name="session_id" value="{{.ID}}">
-                        <button type="submit" class="btn btn-secondary btn-sm">💾 Save as Template</button>
-                    </form>
+                    {{if and .Completed (not .Skipped)}}
+                    <div class="history-actions">
+                        <form action="/templates/save" method="POST" style="display: inline;">
+                            <input type="hidden" name="session_id" value="{{.ID}}">
+                            <button type="submit" class="btn btn-secondary btn-sm">💾 Save as Template</button>
+                        </form>
+                    </div>
+                    {{end}}
                 </div>
                 {{end}}
             </div>
+            {{else}}
+            <div class="empty-state">
+                <p>No training sessions logged yet</p>
+            </div>
             {{end}}
-        </div>
-        {{else}}
-        <div class="empty-state">
-            <h3>No training sessions logged yet</h3>
-            <p>Start logging your workouts from the dashboard!</p>
-            <a href="/" class="btn btn-primary">Go to Dashboard</a>
-        </div>
-        {{end}}
+        </section>
+
+        <section class="history-section">
+            <h3>🛌 Rest Day Notes</h3>
+            {{if .RestDayNotes}}
+            <div class="history-list">
+                {{range .RestDayNotes}}
+                <div class="history-card rest-day-card">
+                    <div class="history-header">
+                        <div>
+                            <h3>🛌 Rest Day</h3>
+                            <span class="history-date">{{.RestDate.Format "Monday, January 2, 2006"}}</span>
+                        </div>
+                        <div class="history-stats">
+                            <span class="stat">
+                                <span class="stat-label">Wellness</span>
+                                <span class="stat-value">{{.WellnessRating}}/10</span>
+                            </span>
+                            <span class="stat">
+                                <span class="stat-label">Soreness</span>
+                                <span class="stat-value">{{.SorenessLevel}}/10</span>
+                            </span>
+                            <span class="stat">
+                                <span class="stat-label">Motivation</span>
+                                <span class="stat-value">{{.MotivationLevel}}/10</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {{if .RecoveryActivities}}
+                    <div class="performance-notes">
+                        <strong>Recovery Activities:</strong> {{.RecoveryActivities}}
+                    </div>
+                    {{end}}
+
+                    {{if .Notes}}
+                    <div class="history-notes">
+                        <strong>Notes:</strong> {{.Notes}}
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <p>No rest day notes logged yet. Track your recovery from the dashboard!</p>
+            </div>
+            {{end}}
+        </section>
     </main>
 
     <footer>

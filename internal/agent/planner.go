@@ -175,6 +175,57 @@ func GenerateDayModification(
     return newDay, nil
 }
 
+// AdjustWeeklyPlan adjusts a weekly plan based on user notes
+func AdjustWeeklyPlan(
+    ctx context.Context,
+    database *db.DB,
+    userConfig *config.UserConfig,
+    weekStart time.Time,
+    previousPlan string,
+    adjustmentNotes string,
+) (string, error) {
+    // Load sport config
+    primarySport := userConfig.GetPrimarySport()
+    if primarySport == nil {
+        return "", fmt.Errorf("no primary sport configured")
+    }
+
+    sportConfig, err := config.LoadSportConfig(primarySport.ConfigFile)
+    if err != nil {
+        return "", fmt.Errorf("failed to load sport config: %w", err)
+    }
+
+    // Create AI client
+    client, err := NewClient(userConfig.Coach.Model, userConfig.Coach.Temperature)
+    if err != nil {
+        return "", fmt.Errorf("failed to create AI client: %w", err)
+    }
+
+    // Build system prompt
+    systemPrompt := BuildSystemPrompt(
+        sportConfig,
+        userConfig.Coach.CoachingStyle,
+        userConfig.Coach.ExplanationDetail,
+    )
+
+    // Load user context
+    userContext, err := LoadUserContext(database, userConfig, weekStart)
+    if err != nil {
+        return "", fmt.Errorf("failed to load user context: %w", err)
+    }
+
+    // Build adjustment prompt
+    adjustmentPrompt := BuildPlanAdjustmentPrompt(userContext, previousPlan, adjustmentNotes)
+
+    // Generate adjusted plan
+    adjustedPlan, err := client.GenerateCompletion(ctx, systemPrompt, adjustmentPrompt)
+    if err != nil {
+        return "", fmt.Errorf("failed to generate adjusted plan: %w", err)
+    }
+
+    return adjustedPlan, nil
+}
+
 // GetWeekStart returns the start of the week (Monday) for the given date
 func GetWeekStart(date time.Time) time.Time {
     weekday := int(date.Weekday())

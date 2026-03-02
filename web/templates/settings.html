@@ -308,6 +308,19 @@
                             Generate Weekly Plan
                         </button>
                     </div>
+
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">📋 Copy Previous Week's Plan</h4>
+                        <p style="margin-bottom: 1rem; color: #6b7280;">Quickly recreate last week's training schedule. Optionally request AI adjustments.</p>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="button" class="btn btn-secondary" onclick="copyPreviousWeek(false)">
+                                Copy as-is
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="showCopyWithAIModal()">
+                                Copy with AI adjustments
+                            </button>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -648,6 +661,61 @@
                 clickedButton.classList.add('active');
             }
         }
+
+        // Copy previous week functions
+        function copyPreviousWeek(withAI) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/settings/copy-previous-week';
+
+            const adjustField = document.createElement('input');
+            adjustField.type = 'hidden';
+            adjustField.name = 'adjust_with_ai';
+            adjustField.value = withAI ? 'true' : 'false';
+            form.appendChild(adjustField);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function showCopyWithAIModal() {
+            document.getElementById('copyWithAIModal').style.display = 'block';
+        }
+
+        function closeCopyWithAIModal() {
+            document.getElementById('copyWithAIModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('copyWithAIModal');
+            if (event.target == modal) {
+                closeCopyWithAIModal();
+            }
+        }
     </script>
+
+    <!-- Copy with AI Modal -->
+    <div id="copyWithAIModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeCopyWithAIModal()">&times;</span>
+            <h3>📋 Copy Previous Week with AI Adjustments</h3>
+            <p>Describe how you want the AI to adjust the previous week's plan for this week.</p>
+            <form action="/settings/copy-previous-week" method="POST">
+                <input type="hidden" name="adjust_with_ai" value="true">
+
+                <div class="form-group">
+                    <label for="adjustment_notes">Adjustment Notes</label>
+                    <textarea id="adjustment_notes" name="adjustment_notes" rows="5" required placeholder="e.g., 'Increase intensity by 10%', 'Add one more sparring session', 'Focus more on cardio this week', 'Reduce volume due to fatigue'"></textarea>
+                    <small>Be specific about what you want to change compared to last week</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeCopyWithAIModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Generate Adjusted Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

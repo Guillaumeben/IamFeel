@@ -252,3 +252,17 @@ type SessionTemplate struct {
     CreatedAt       time.Time `json:"created_at"`
     UpdatedAt       time.Time `json:"updated_at"`
 }
+
+// RestDayNote represents a rest day entry with wellness tracking
+type RestDayNote struct {
+    ID                 int       `json:"id"`
+    UserID             int       `json:"user_id"`
+    RestDate           time.Time `json:"rest_date"`
+    WellnessRating     int       `json:"wellness_rating"`
+    SorenessLevel      int       `json:"soreness_level"`
+    MotivationLevel    int       `json:"motivation_level"`
+    RecoveryActivities string    `json:"recovery_activities"`
+    Notes              string    `json:"notes"`
+    CreatedAt          time.Time `json:"created_at"`
+    UpdatedAt          time.Time `json:"updated_at"`
+}

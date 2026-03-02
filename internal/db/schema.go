@@ -278,6 +278,22 @@ CREATE TABLE IF NOT EXISTS session_templates (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Rest day notes: logging for rest/recovery days
+CREATE TABLE IF NOT EXISTS rest_day_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    rest_date DATE NOT NULL,
+    wellness_rating INTEGER CHECK(wellness_rating BETWEEN 1 AND 10),
+    soreness_level INTEGER CHECK(soreness_level BETWEEN 1 AND 10),
+    motivation_level INTEGER CHECK(motivation_level BETWEEN 1 AND 10),
+    recovery_activities TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, rest_date)
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_training_sessions_user_date ON training_sessions(user_id, session_date DESC);
 CREATE INDEX IF NOT EXISTS idx_training_sessions_sport ON training_sessions(sport_id);
@@ -286,6 +302,7 @@ CREATE INDEX IF NOT EXISTS idx_nutrition_logs_user_date ON nutrition_logs(user_i
 CREATE INDEX IF NOT EXISTS idx_goals_user_type ON goals(user_id, goal_type);
 CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_session_templates_user ON session_templates(user_id, sport_name);
+CREATE INDEX IF NOT EXISTS idx_rest_day_notes_user_date ON rest_day_notes(user_id, rest_date DESC);
 `
 
 // migrationSQL contains ALTER statements for schema updates

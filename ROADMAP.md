@@ -9,14 +9,14 @@
 - [ ] Clear filters button
 
 ### 2. Copy Previous Week's Plan
-- [ ] "Copy Last Week" button on settings page
-- [ ] Option to request AI adjustments when copying
+- [x] "Copy Last Week" button on settings page
+- [x] Option to request AI adjustments when copying
 - [ ] Preview before saving
 
 ### 3. Rest Day Notes
-- [ ] Add rest day logging functionality
-- [ ] Track recovery activities (stretching, foam rolling, etc.)
-- [ ] Simple wellness check-in (how you feel)
+- [x] Add rest day logging functionality
+- [x] Track recovery activities (stretching, foam rolling, etc.)
+- [x] Simple wellness check-in (how you feel)
 
 ### 4. Equipment Quick-Add
 - [ ] Pre-populated templates by sport

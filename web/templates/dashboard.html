@@ -198,6 +198,14 @@
             </div>
         </section>
         {{end}}
+
+        <section class="rest-day-section">
+            <div class="section-header">
+                <h3>🛌 Rest Day Notes</h3>
+                <button onclick="showRestDayModal()" class="btn btn-primary">Log Rest Day</button>
+            </div>
+            <p class="section-description">Track how you're feeling on rest days, recovery activities, and wellness metrics</p>
+        </section>
     </main>
 
     <footer>
@@ -267,6 +275,54 @@
         </div>
     </div>
 
+    <!-- Rest Day Modal -->
+    <div id="restDayModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeRestDayModal()">&times;</span>
+            <h3>🛌 Log Rest Day</h3>
+            <form id="restDayForm" action="/rest-day/log" method="POST">
+                <div class="form-group">
+                    <label for="rest_date">Date</label>
+                    <input type="date" id="rest_date" name="rest_date" value="{{.TodayDate}}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="wellness_rating">Wellness Rating (1-10)</label>
+                    <input type="number" id="wellness_rating" name="wellness_rating" min="1" max="10" value="7" required>
+                    <small>Overall how you're feeling today</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="soreness_level">Soreness Level (1-10)</label>
+                    <input type="number" id="soreness_level" name="soreness_level" min="1" max="10" value="5" required>
+                    <small>1 = No soreness, 10 = Very sore</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="motivation_level">Motivation Level (1-10)</label>
+                    <input type="number" id="motivation_level" name="motivation_level" min="1" max="10" value="7" required>
+                    <small>How motivated you feel for training</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="recovery_activities">Recovery Activities</label>
+                    <textarea id="recovery_activities" name="recovery_activities" rows="2" placeholder="e.g., Foam rolling, stretching, massage, ice bath"></textarea>
+                    <small>What recovery activities did you do?</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="rest_notes">Notes</label>
+                    <textarea id="rest_notes" name="notes" rows="3" placeholder="Any additional notes about how you're feeling or what you did today"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeRestDayModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Rest Day</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function showCompleteModal(sessionId, sessionType, duration) {
             document.getElementById('completeSessionId').value = sessionId;
@@ -289,15 +345,27 @@
             document.getElementById('skipModal').style.display = 'none';
         }
 
+        function showRestDayModal() {
+            document.getElementById('restDayModal').style.display = 'block';
+        }
+
+        function closeRestDayModal() {
+            document.getElementById('restDayModal').style.display = 'none';
+        }
+
         // Close modals when clicking outside
         window.onclick = function(event) {
             const completeModal = document.getElementById('completeModal');
             const skipModal = document.getElementById('skipModal');
+            const restDayModal = document.getElementById('restDayModal');
             if (event.target == completeModal) {
                 closeCompleteModal();
             }
             if (event.target == skipModal) {
                 closeSkipModal();
+            }
+            if (event.target == restDayModal) {
+                closeRestDayModal();
             }
         }
     </script>

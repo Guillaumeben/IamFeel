@@ -840,3 +840,133 @@ func (db *DB) GetTrainingSession(sessionID int) (*TrainingSession, error) {
 
     return session, nil
 }
+
+// ===== Rest Day Notes Queries =====
+
+// CreateRestDayNote creates or updates a rest day note
+func (db *DB) CreateRestDayNote(note *RestDayNote) error {
+    query := `
+        INSERT INTO rest_day_notes
+        (user_id, rest_date, wellness_rating, soreness_level, motivation_level,
+         recovery_activities, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, rest_date) DO UPDATE SET
+            wellness_rating = excluded.wellness_rating,
+            soreness_level = excluded.soreness_level,
+            motivation_level = excluded.motivation_level,
+            recovery_activities = excluded.recovery_activities,
+            notes = excluded.notes,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING id, created_at, updated_at
+    `
+
+    return db.conn.QueryRow(
+        query,
+        note.UserID, note.RestDate, note.WellnessRating, note.SorenessLevel,
+        note.MotivationLevel, note.RecoveryActivities, note.Notes,
+    ).Scan(&note.ID, &note.CreatedAt, &note.UpdatedAt)
+}
+
+// GetRestDayNote retrieves a rest day note for a specific date
+func (db *DB) GetRestDayNote(userID int, date time.Time) (*RestDayNote, error) {
+    query := `
+        SELECT id, user_id, rest_date, wellness_rating, soreness_level,
+               motivation_level, recovery_activities, notes, created_at, updated_at
+        FROM rest_day_notes
+        WHERE user_id = ? AND rest_date = ?
+    `
+
+    var note RestDayNote
+    err := db.conn.QueryRow(query, userID, date).Scan(
+        &note.ID, &note.UserID, &note.RestDate, &note.WellnessRating,
+        &note.SorenessLevel, &note.MotivationLevel, &note.RecoveryActivities,
+        &note.Notes, &note.CreatedAt, &note.UpdatedAt,
+    )
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, fmt.Errorf("rest day note not found")
+        }
+        return nil, fmt.Errorf("failed to get rest day note: %w", err)
+    }
+
+    return &note, nil
+}
+
+// GetRestDayNotes retrieves rest day notes within a date range
+func (db *DB) GetRestDayNotes(userID int, startDate, endDate time.Time) ([]*RestDayNote, error) {
+    query := `
+        SELECT id, user_id, rest_date, wellness_rating, soreness_level,
+               motivation_level, recovery_activities, notes, created_at, updated_at
+        FROM rest_day_notes
+        WHERE user_id = ? AND rest_date BETWEEN ? AND ?
+        ORDER BY rest_date DESC
+    `
+
+    rows, err := db.conn.Query(query, userID, startDate, endDate)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query rest day notes: %w", err)
+    }
+    defer rows.Close()
+
+    var notes []*RestDayNote
+    for rows.Next() {
+        var note RestDayNote
+        err := rows.Scan(
+            &note.ID, &note.UserID, &note.RestDate, &note.WellnessRating,
+            &note.SorenessLevel, &note.MotivationLevel, &note.RecoveryActivities,
+            &note.Notes, &note.CreatedAt, &note.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan rest day note: %w", err)
+        }
+        notes = append(notes, &note)
+    }
+
+    return notes, nil
+}
+
+// GetRecentRestDayNotes retrieves the most recent N rest day notes
+func (db *DB) GetRecentRestDayNotes(userID int, limit int) ([]*RestDayNote, error) {
+    query := `
+        SELECT id, user_id, rest_date, wellness_rating, soreness_level,
+               motivation_level, recovery_activities, notes, created_at, updated_at
+        FROM rest_day_notes
+        WHERE user_id = ?
+        ORDER BY rest_date DESC
+        LIMIT ?
+    `
+
+    rows, err := db.conn.Query(query, userID, limit)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query recent rest day notes: %w", err)
+    }
+    defer rows.Close()
+
+    var notes []*RestDayNote
+    for rows.Next() {
+        var note RestDayNote
+        err := rows.Scan(
+            &note.ID, &note.UserID, &note.RestDate, &note.WellnessRating,
+            &note.SorenessLevel, &note.MotivationLevel, &note.RecoveryActivities,
+            &note.Notes, &note.CreatedAt, &note.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan rest day note: %w", err)
+        }
+        notes = append(notes, &note)
+    }
+
+    return notes, nil
+}
+
+// DeleteRestDayNote deletes a rest day note
+func (db *DB) DeleteRestDayNote(noteID int) error {
+    query := `DELETE FROM rest_day_notes WHERE id = ?`
+
+    _, err := db.conn.Exec(query, noteID)
+    if err != nil {
+        return fmt.Errorf("failed to delete rest day note: %w", err)
+    }
+
+    return nil
+}
