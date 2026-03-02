@@ -25,6 +25,7 @@ user_config.yaml
 .env.local
 *.key
 *.pem
+certs/
 
 # API keys
 anthropic_key.txt

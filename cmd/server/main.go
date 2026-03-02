@@ -15,7 +15,9 @@ import (
 const (
     defaultDBPath         = "data/coach.db"
     defaultUserConfigPath = "data/user_config.yaml"
-    defaultPort           = "8080"
+    defaultPort           = "8443"
+    certFile              = "certs/cert.pem"
+    keyFile               = "certs/key.pem"
 )
 
 func main() {
@@ -84,16 +86,16 @@ func main() {
     fmt.Println("║              IamFeel - Web Dashboard                     ║")
     fmt.Println("╚══════════════════════════════════════════════════════════╝")
     fmt.Println()
-    fmt.Printf("🚀 Server starting on http://localhost:%s\n", port)
+    fmt.Printf("🚀 Server starting on https://localhost:%s (HTTPS)\n", port)
     fmt.Println()
     fmt.Println("Available routes:")
-    fmt.Println("  • Dashboard:  http://localhost:" + port)
-    fmt.Println("  • History:    http://localhost:" + port + "/history")
+    fmt.Println("  • Dashboard:  https://localhost:" + port)
+    fmt.Println("  • History:    https://localhost:" + port + "/history")
     fmt.Println()
     fmt.Println("Press Ctrl+C to stop")
     fmt.Println()
 
-    if err := http.ListenAndServe(addr, r); err != nil {
+    if err := http.ListenAndServeTLS(addr, certFile, keyFile, r); err != nil {
         log.Fatalf("Server failed to start: %v", err)
     }
 }
