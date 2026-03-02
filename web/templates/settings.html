@@ -37,6 +37,28 @@
         </div>
         {{end}}
 
+        <!-- AI Usage Counter -->
+        <div class="ai-usage-counter" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 1rem; margin-bottom: 2rem; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>🤖 AI Calls Today:</strong>
+                    <span style="font-size: 1.2rem; margin-left: 0.5rem;">{{.AIUsageCount}} / {{.AIUsageLimit}}</span>
+                </div>
+                {{if ge .AIUsageCount .AIUsageLimit}}
+                <div style="color: #ef4444;">
+                    ⚠️ Daily limit reached
+                </div>
+                {{else}}
+                <div style="color: #10b981;">
+                    ✓ {{sub .AIUsageLimit .AIUsageCount}} calls remaining
+                </div>
+                {{end}}
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; opacity: 0.8;">
+                Resets daily at midnight. AI calls include: plan generation, modifications, and adjustments.
+            </div>
+        </div>
+
         <!-- Settings Tabs -->
         <div class="settings-tabs">
             <button type="button" class="tab-button active" onclick="switchTab('profile', this)">👤 Profile</button>

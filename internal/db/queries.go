@@ -970,3 +970,51 @@ func (db *DB) DeleteRestDayNote(noteID int) error {
 
     return nil
 }
+
+// GetDailyAIUsage retrieves the AI usage count for a user on a specific date
+func (db *DB) GetDailyAIUsage(userID int, date time.Time) (int, error) {
+    dateStr := date.Format("2006-01-02")
+    query := `SELECT call_count FROM ai_usage WHERE user_id = ? AND usage_date = ?`
+
+    var count int
+    err := db.conn.QueryRow(query, userID, dateStr).Scan(&count)
+    if err == sql.ErrNoRows {
+        return 0, nil
+    }
+    if err != nil {
+        return 0, fmt.Errorf("failed to get AI usage: %w", err)
+    }
+
+    return count, nil
+}
+
+// IncrementAIUsage increments the AI usage count for a user on a specific date
+func (db *DB) IncrementAIUsage(userID int, date time.Time) error {
+    dateStr := date.Format("2006-01-02")
+    query := `
+        INSERT INTO ai_usage (user_id, usage_date, call_count, created_at, updated_at)
+        VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, usage_date) DO UPDATE SET
+            call_count = call_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+    `
+
+    _, err := db.conn.Exec(query, userID, dateStr)
+    if err != nil {
+        return fmt.Errorf("failed to increment AI usage: %w", err)
+    }
+
+    return nil
+}
+
+// CheckAIRateLimit checks if the user has exceeded their daily AI call limit
+// Returns (withinLimit, currentCount, error)
+func (db *DB) CheckAIRateLimit(userID int, dailyLimit int) (bool, int, error) {
+    today := time.Now()
+    count, err := db.GetDailyAIUsage(userID, today)
+    if err != nil {
+        return false, 0, err
+    }
+
+    return count < dailyLimit, count, nil
+}

@@ -294,6 +294,18 @@ CREATE TABLE IF NOT EXISTS rest_day_notes (
     UNIQUE(user_id, rest_date)
 );
 
+-- AI usage tracking: rate limiting for AI calls
+CREATE TABLE IF NOT EXISTS ai_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    usage_date DATE NOT NULL,
+    call_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, usage_date)
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_training_sessions_user_date ON training_sessions(user_id, session_date DESC);
 CREATE INDEX IF NOT EXISTS idx_training_sessions_sport ON training_sessions(sport_id);
@@ -303,6 +315,7 @@ CREATE INDEX IF NOT EXISTS idx_goals_user_type ON goals(user_id, goal_type);
 CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_session_templates_user ON session_templates(user_id, sport_name);
 CREATE INDEX IF NOT EXISTS idx_rest_day_notes_user_date ON rest_day_notes(user_id, rest_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, usage_date DESC);
 `
 
 // migrationSQL contains ALTER statements for schema updates

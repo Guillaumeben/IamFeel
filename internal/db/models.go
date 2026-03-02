@@ -266,3 +266,13 @@ type RestDayNote struct {
     CreatedAt          time.Time `json:"created_at"`
     UpdatedAt          time.Time `json:"updated_at"`
 }
+
+// AIUsage represents daily AI call tracking for rate limiting
+type AIUsage struct {
+    ID        int       `json:"id"`
+    UserID    int       `json:"user_id"`
+    UsageDate time.Time `json:"usage_date"`
+    CallCount int       `json:"call_count"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+}

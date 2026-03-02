@@ -14,6 +14,11 @@ import (
     "github.com/tuxnam/iamfeel/internal/db"
 )
 
+const (
+    // DailyAICallLimit is the maximum number of AI calls allowed per user per day
+    DailyAICallLimit = 10
+)
+
 // DashboardData holds data for the dashboard template
 type DashboardData struct {
     UserName          string
@@ -398,6 +403,18 @@ func (s *Server) HandleModifyDayRequest(w http.ResponseWriter, r *http.Request) 
         return
     }
 
+    // Check rate limit
+    withinLimit, currentCount, err := s.db.CheckAIRateLimit(user.ID, DailyAICallLimit)
+    if err != nil {
+        http.Error(w, "Failed to check rate limit", http.StatusInternalServerError)
+        log.Printf("Error checking rate limit: %v", err)
+        return
+    }
+    if !withinLimit {
+        http.Error(w, fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow.", currentCount, DailyAICallLimit), http.StatusTooManyRequests)
+        return
+    }
+
     // Generate modified day
     ctx := r.Context()
     newDay, err := agent.GenerateDayModification(
@@ -413,6 +430,11 @@ func (s *Server) HandleModifyDayRequest(w http.ResponseWriter, r *http.Request) 
         http.Error(w, fmt.Sprintf("Failed to generate modification: %v", err), http.StatusInternalServerError)
         log.Printf("Error generating modification: %v", err)
         return
+    }
+
+    // Increment AI usage counter
+    if err := s.db.IncrementAIUsage(user.ID, time.Now()); err != nil {
+        log.Printf("Warning: Failed to increment AI usage: %v", err)
     }
 
     weekEnd := weekStart.AddDate(0, 0, 6)
@@ -674,12 +696,14 @@ func replaceDayInPlan(originalPlan string, dayName string, newDayPlan string) st
 
 // SettingsData holds data for the settings template
 type SettingsData struct {
-    User       *db.User
-    Config     *config.UserConfig
-    Success    bool
-    Error      string
-    ThemeClass string
-    SportIcon  string
+    User          *db.User
+    Config        *config.UserConfig
+    Success       bool
+    Error         string
+    ThemeClass    string
+    SportIcon     string
+    AIUsageCount  int
+    AIUsageLimit  int
 }
 
 // HandleSettings displays the settings page
@@ -741,11 +765,20 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
         log.Printf("Created default config for user %d", user.ID)
     }
 
+    // Get AI usage count for today
+    aiUsageCount, err := s.db.GetDailyAIUsage(user.ID, time.Now())
+    if err != nil {
+        log.Printf("Warning: Failed to get AI usage: %v", err)
+        aiUsageCount = 0
+    }
+
     data := SettingsData{
-        User:       user,
-        Config:     userConfig,
-        ThemeClass: s.GetThemeClass(user.ID),
-        SportIcon:  s.GetSportIconForUser(user.ID),
+        User:         user,
+        Config:       userConfig,
+        ThemeClass:   s.GetThemeClass(user.ID),
+        SportIcon:    s.GetSportIconForUser(user.ID),
+        AIUsageCount: aiUsageCount,
+        AIUsageLimit: DailyAICallLimit,
     }
 
     if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
@@ -851,11 +884,13 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     if err := s.db.UpdateUser(user); err != nil {
         log.Printf("Failed to update user: %v", err)
         data := SettingsData{
-            User:       user,
-            Config:     userConfig,
-            Error:      fmt.Sprintf("Failed to update user: %v", err),
-            ThemeClass: s.GetThemeClass(user.ID),
-            SportIcon:  s.GetSportIconForUser(user.ID),
+            User:         user,
+            Config:       userConfig,
+            Error:        fmt.Sprintf("Failed to update user: %v", err),
+            ThemeClass:   s.GetThemeClass(user.ID),
+            SportIcon:    s.GetSportIconForUser(user.ID),
+            AIUsageCount: 0,
+            AIUsageLimit: DailyAICallLimit,
         }
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
@@ -1133,6 +1168,25 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Check rate limit
+    withinLimit, currentCount, err := s.db.CheckAIRateLimit(user.ID, DailyAICallLimit)
+    if err != nil {
+        http.Error(w, "Failed to check rate limit", http.StatusInternalServerError)
+        log.Printf("Error checking rate limit: %v", err)
+        return
+    }
+    if !withinLimit {
+        data := SettingsData{
+            User:       user,
+            Config:     userConfig,
+            Error:      fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow.", currentCount, DailyAICallLimit),
+            ThemeClass: s.GetThemeClass(user.ID),
+            SportIcon:  s.GetSportIconForUser(user.ID),
+        }
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
     // Generate plan
     weekStart := agent.GetWeekStart(time.Now())
     planText, err := agent.GenerateWeeklyPlan(r.Context(), s.db, userConfig, weekStart)
@@ -1164,6 +1218,11 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
     }
 
     log.Printf("Successfully generated and saved weekly plan for user: %s (ID: %d)", user.Name, user.ID)
+
+    // Increment AI usage counter
+    if err := s.db.IncrementAIUsage(user.ID, time.Now()); err != nil {
+        log.Printf("Warning: Failed to increment AI usage: %v", err)
+    }
 
     // Redirect to dashboard to show new plan
     http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -1286,6 +1345,25 @@ func (s *Server) HandleCopyPreviousWeek(w http.ResponseWriter, r *http.Request) 
             return
         }
 
+        // Check rate limit for AI usage
+        withinLimit, currentCount, err := s.db.CheckAIRateLimit(user.ID, DailyAICallLimit)
+        if err != nil {
+            http.Error(w, "Failed to check rate limit", http.StatusInternalServerError)
+            log.Printf("Error checking rate limit: %v", err)
+            return
+        }
+        if !withinLimit {
+            data := SettingsData{
+                User:       user,
+                Config:     userConfig,
+                Error:      fmt.Sprintf("Daily AI call limit reached (%d/%d). Please try again tomorrow or copy without AI adjustment.", currentCount, DailyAICallLimit),
+                ThemeClass: s.GetThemeClass(user.ID),
+                SportIcon:  s.GetSportIconForUser(user.ID),
+            }
+            s.templates.ExecuteTemplate(w, "settings.html", data)
+            return
+        }
+
         // Generate adjusted plan using AI
         ctx := r.Context()
         adjustedPlan, err := agent.AdjustWeeklyPlan(
@@ -1300,6 +1378,11 @@ func (s *Server) HandleCopyPreviousWeek(w http.ResponseWriter, r *http.Request) 
             http.Error(w, fmt.Sprintf("Failed to adjust plan: %v", err), http.StatusInternalServerError)
             log.Printf("Error adjusting plan: %v", err)
             return
+        }
+
+        // Increment AI usage counter
+        if err := s.db.IncrementAIUsage(user.ID, time.Now()); err != nil {
+            log.Printf("Warning: Failed to increment AI usage: %v", err)
         }
 
         newPlanData = adjustedPlan
