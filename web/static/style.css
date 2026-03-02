@@ -99,13 +99,38 @@ body {
 
 /* Header */
 header {
-    background: rgba(17, 24, 39, 0.8);
-    backdrop-filter: blur(20px) saturate(180%);
+    position: relative;
     border-bottom: 1px solid var(--border);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     position: sticky;
     top: 0;
     z-index: 100;
+    overflow: hidden;
+}
+
+/* Single hero sport background */
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('https://images.unsplash.com/photo-1623874514711-0f321325f318?w=1600&q=90') center center;
+    background-size: cover;
+    filter: grayscale(70%) brightness(0.6) contrast(1.15) sepia(15%);
+    z-index: 0;
+}
+
+header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(17, 24, 39, 0.6) 0%, rgba(31, 41, 55, 0.5) 50%, rgba(17, 24, 39, 0.6) 100%);
+    z-index: 1;
 }
 
 header .container {
@@ -113,6 +138,8 @@ header .container {
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 2rem;
+    position: relative;
+    z-index: 2;
 }
 
 header h1 {
@@ -121,6 +148,7 @@ header h1 {
     font-weight: 900;
     letter-spacing: -1px;
     text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 nav {
