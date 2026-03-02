@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IamFeel - Session Templates</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="{{.ThemeClass}}">
+    <header>
+        <div class="container">
+            <h1>{{.SportIcon}} IamFeel</h1>
+            <nav>
+                <a href="/">Dashboard</a>
+                <a href="/history">History</a>
+                <a href="/templates" class="active">Templates</a>
+                <a href="/users">Users</a>
+                <a href="/settings">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Session Templates</h2>
+            <p>Create reusable workout templates for quick session logging</p>
+        </div>
+
+        <section class="card">
+            <div class="card-header">
+                <h3>Create New Template</h3>
+            </div>
+            <form action="/templates/create" method="POST" class="form-grid">
+                <div class="form-group">
+                    <label for="template_name">Template Name *</label>
+                    <input type="text" id="template_name" name="template_name" required placeholder="e.g., Heavy Bag Workout">
+                </div>
+
+                <div class="form-group">
+                    <label for="sport_name">Sport *</label>
+                    <select id="sport_name" name="sport_name" required>
+                        <option value="">Select sport...</option>
+                        <option value="boxing">Boxing</option>
+                        <option value="fitness">Fitness</option>
+                        <option value="running">Running</option>
+                        <option value="bjj">BJJ</option>
+                        <option value="cycling">Cycling</option>
+                        <option value="swimming">Swimming</option>
+                        <option value="crossfit">CrossFit</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="session_type">Session Type *</label>
+                    <input type="text" id="session_type" name="session_type" required placeholder="e.g., Sparring, Cardio, Strength">
+                </div>
+
+                <div class="form-group">
+                    <label for="duration_minutes">Duration (minutes) *</label>
+                    <input type="number" id="duration_minutes" name="duration_minutes" required min="1" value="60">
+                </div>
+
+                <div class="form-group">
+                    <label for="perceived_effort">Typical Effort (1-10)</label>
+                    <select id="perceived_effort" name="perceived_effort">
+                        <option value="0">Not specified</option>
+                        {{range $i := Iterate 10}}
+                        <option value="{{$i}}" {{if eq $i 7}}selected{{end}}>{{$i}}</option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="description">Description / Notes</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Describe the typical workout structure..."></textarea>
+                </div>
+
+                <div class="form-actions full-width">
+                    <button type="submit" class="btn btn-primary">Create Template</button>
+                </div>
+            </form>
+        </section>
+
+        {{if .Templates}}
+        <section class="templates-grid">
+            {{range .Templates}}
+            <div class="template-card">
+                <div class="template-header">
+                    <h3>{{.TemplateName}}</h3>
+                    <span class="template-sport">{{.SportName}}</span>
+                </div>
+                <div class="template-body">
+                    <div class="template-info">
+                        <div class="info-item">
+                            <span class="info-label">Type:</span>
+                            <span class="info-value">{{.SessionType}}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Duration:</span>
+                            <span class="info-value">{{.DurationMinutes}} min</span>
+                        </div>
+                        {{if .PerceivedEffort}}
+                        <div class="info-item">
+                            <span class="info-label">Effort:</span>
+                            <span class="info-value">{{.PerceivedEffort}}/10</span>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{if .Description}}
+                    <div class="template-description">
+                        {{.Description}}
+                    </div>
+                    {{end}}
+                </div>
+                <div class="template-actions">
+                    <form action="/templates/use" method="POST" style="display: inline;">
+                        <input type="hidden" name="template_id" value="{{.ID}}">
+                        <input type="hidden" name="session_date" value="">
+                        <button type="submit" class="btn btn-primary btn-sm" onclick="this.form.session_date.value = new Date().toISOString().split('T')[0]">
+                            Quick Log Today
+                        </button>
+                    </form>
+                    <form action="/templates/delete" method="POST" style="display: inline;">
+                        <input type="hidden" name="template_id" value="{{.ID}}">
+                        <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Are you sure you want to delete this template?')">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {{end}}
+        </section>
+        {{else}}
+        <div class="empty-state">
+            <h3>No templates yet</h3>
+            <p>Create your first template above to save time logging frequent workouts!</p>
+        </div>
+        {{end}}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>IamFeel - AI-Powered Training Assistant</p>
+        </div>
+    </footer>
+</body>
+</html>

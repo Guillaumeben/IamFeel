@@ -45,6 +45,10 @@ func main() {
     // Routes
     r.Get("/", server.HandleDashboard)
     r.Get("/history", server.HandleHistory)
+    r.Get("/templates", server.HandleTemplates)
+    r.Post("/templates/create", server.HandleCreateTemplate)
+    r.Post("/templates/delete", server.HandleDeleteTemplate)
+    r.Post("/templates/use", server.HandleUseTemplate)
     r.Get("/settings", server.HandleSettings)
     r.Post("/settings", server.HandleSettingsSave)
     r.Post("/settings/generate-plan", server.HandleGeneratePlan)
