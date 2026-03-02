@@ -646,3 +646,162 @@ func (db *DB) GetAllGoals(userID int) ([]*Goal, error) {
 
     return goals, nil
 }
+
+// ===== Session Template Queries =====
+
+// CreateSessionTemplate creates a new session template
+func (db *DB) CreateSessionTemplate(template *SessionTemplate) error {
+    query := `
+        INSERT INTO session_templates (user_id, template_name, sport_name, session_type,
+                                       duration_minutes, perceived_effort, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `
+
+    result, err := db.conn.Exec(query,
+        template.UserID, template.TemplateName, template.SportName,
+        template.SessionType, template.DurationMinutes, template.PerceivedEffort,
+        template.Description,
+    )
+    if err != nil {
+        return fmt.Errorf("failed to create session template: %w", err)
+    }
+
+    id, err := result.LastInsertId()
+    if err != nil {
+        return fmt.Errorf("failed to get template ID: %w", err)
+    }
+
+    template.ID = int(id)
+    template.CreatedAt = time.Now()
+    template.UpdatedAt = time.Now()
+
+    return nil
+}
+
+// GetSessionTemplates retrieves all templates for a user
+func (db *DB) GetSessionTemplates(userID int) ([]*SessionTemplate, error) {
+    query := `
+        SELECT id, user_id, template_name, sport_name, session_type,
+               duration_minutes, perceived_effort, description,
+               created_at, updated_at
+        FROM session_templates
+        WHERE user_id = ?
+        ORDER BY sport_name, template_name
+    `
+
+    rows, err := db.conn.Query(query, userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query session templates: %w", err)
+    }
+    defer rows.Close()
+
+    var templates []*SessionTemplate
+    for rows.Next() {
+        var tmpl SessionTemplate
+        err := rows.Scan(
+            &tmpl.ID, &tmpl.UserID, &tmpl.TemplateName, &tmpl.SportName,
+            &tmpl.SessionType, &tmpl.DurationMinutes, &tmpl.PerceivedEffort,
+            &tmpl.Description, &tmpl.CreatedAt, &tmpl.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan template: %w", err)
+        }
+        templates = append(templates, &tmpl)
+    }
+
+    return templates, nil
+}
+
+// GetSessionTemplatesBySport retrieves templates filtered by sport
+func (db *DB) GetSessionTemplatesBySport(userID int, sportName string) ([]*SessionTemplate, error) {
+    query := `
+        SELECT id, user_id, template_name, sport_name, session_type,
+               duration_minutes, perceived_effort, description,
+               created_at, updated_at
+        FROM session_templates
+        WHERE user_id = ? AND sport_name = ?
+        ORDER BY template_name
+    `
+
+    rows, err := db.conn.Query(query, userID, sportName)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query session templates by sport: %w", err)
+    }
+    defer rows.Close()
+
+    var templates []*SessionTemplate
+    for rows.Next() {
+        var tmpl SessionTemplate
+        err := rows.Scan(
+            &tmpl.ID, &tmpl.UserID, &tmpl.TemplateName, &tmpl.SportName,
+            &tmpl.SessionType, &tmpl.DurationMinutes, &tmpl.PerceivedEffort,
+            &tmpl.Description, &tmpl.CreatedAt, &tmpl.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan template: %w", err)
+        }
+        templates = append(templates, &tmpl)
+    }
+
+    return templates, nil
+}
+
+// GetSessionTemplate retrieves a single template by ID
+func (db *DB) GetSessionTemplate(templateID int) (*SessionTemplate, error) {
+    query := `
+        SELECT id, user_id, template_name, sport_name, session_type,
+               duration_minutes, perceived_effort, description,
+               created_at, updated_at
+        FROM session_templates
+        WHERE id = ?
+    `
+
+    var tmpl SessionTemplate
+    err := db.conn.QueryRow(query, templateID).Scan(
+        &tmpl.ID, &tmpl.UserID, &tmpl.TemplateName, &tmpl.SportName,
+        &tmpl.SessionType, &tmpl.DurationMinutes, &tmpl.PerceivedEffort,
+        &tmpl.Description, &tmpl.CreatedAt, &tmpl.UpdatedAt,
+    )
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, fmt.Errorf("template not found")
+        }
+        return nil, fmt.Errorf("failed to get template: %w", err)
+    }
+
+    return &tmpl, nil
+}
+
+// UpdateSessionTemplate updates an existing template
+func (db *DB) UpdateSessionTemplate(template *SessionTemplate) error {
+    query := `
+        UPDATE session_templates
+        SET template_name = ?, sport_name = ?, session_type = ?,
+            duration_minutes = ?, perceived_effort = ?, description = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `
+
+    _, err := db.conn.Exec(query,
+        template.TemplateName, template.SportName, template.SessionType,
+        template.DurationMinutes, template.PerceivedEffort, template.Description,
+        template.ID,
+    )
+    if err != nil {
+        return fmt.Errorf("failed to update template: %w", err)
+    }
+
+    return nil
+}
+
+// DeleteSessionTemplate deletes a template
+func (db *DB) DeleteSessionTemplate(templateID int) error {
+    query := `DELETE FROM session_templates WHERE id = ?`
+
+    _, err := db.conn.Exec(query, templateID)
+    if err != nil {
+        return fmt.Errorf("failed to delete template: %w", err)
+    }
+
+    return nil
+}

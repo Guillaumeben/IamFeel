@@ -263,6 +263,21 @@ CREATE TABLE IF NOT EXISTS chat_history (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Session templates: reusable session configurations
+CREATE TABLE IF NOT EXISTS session_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    template_name TEXT NOT NULL,
+    sport_name TEXT NOT NULL,
+    session_type TEXT NOT NULL,
+    duration_minutes INTEGER,
+    perceived_effort INTEGER CHECK(perceived_effort = 0 OR perceived_effort BETWEEN 1 AND 10),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_training_sessions_user_date ON training_sessions(user_id, session_date DESC);
 CREATE INDEX IF NOT EXISTS idx_training_sessions_sport ON training_sessions(sport_id);
@@ -270,6 +285,7 @@ CREATE INDEX IF NOT EXISTS idx_weekly_plans_user_date ON weekly_plans(user_id, w
 CREATE INDEX IF NOT EXISTS idx_nutrition_logs_user_date ON nutrition_logs(user_id, log_date DESC);
 CREATE INDEX IF NOT EXISTS idx_goals_user_type ON goals(user_id, goal_type);
 CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_session_templates_user ON session_templates(user_id, sport_name);
 `
 
 // migrationSQL contains ALTER statements for schema updates

@@ -238,3 +238,17 @@ type TrackingSettings struct {
     CreatedAt        time.Time `json:"created_at"`
     UpdatedAt        time.Time `json:"updated_at"`
 }
+
+// SessionTemplate represents a reusable session configuration
+type SessionTemplate struct {
+    ID              int       `json:"id"`
+    UserID          int       `json:"user_id"`
+    TemplateName    string    `json:"template_name"`
+    SportName       string    `json:"sport_name"`
+    SessionType     string    `json:"session_type"`
+    DurationMinutes int       `json:"duration_minutes"`
+    PerceivedEffort int       `json:"perceived_effort"`
+    Description     string    `json:"description"`
+    CreatedAt       time.Time `json:"created_at"`
+    UpdatedAt       time.Time `json:"updated_at"`
+}
