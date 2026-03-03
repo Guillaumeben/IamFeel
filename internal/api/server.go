@@ -106,9 +106,12 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
         }
 
         configGyms = append(configGyms, config.Gym{
-            Name:     gym.Name,
-            Type:     gym.Type,
-            Sessions: clubSessions,
+            Name:          gym.Name,
+            Type:          gym.Type,
+            Membership:    gym.Membership,
+            SessionsLimit: gym.SessionsLimit,
+            LimitPeriod:   gym.LimitPeriod,
+            Sessions:      clubSessions,
         })
     }
     equipmentAccess.Gyms = configGyms

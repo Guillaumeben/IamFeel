@@ -108,11 +108,13 @@ type EquipmentAccess struct {
 
 // Gym represents a gym or club membership
 type Gym struct {
-    Name          string         `yaml:"name"`
-    Type          string         `yaml:"type"` // boxing_club, commercial_gym, CrossFit, etc.
-    Membership    string         `yaml:"membership"`
-    AvailableDays []string       `yaml:"available_days,omitempty"`
-    Sessions      []ClubSession  `yaml:"sessions"`
+    Name           string         `yaml:"name"`
+    Type           string         `yaml:"type"` // boxing_club, commercial_gym, CrossFit, etc.
+    Membership     string         `yaml:"membership"`
+    SessionsLimit  *int           `yaml:"sessions_limit,omitempty"`
+    LimitPeriod    *string        `yaml:"limit_period,omitempty"`
+    AvailableDays  []string       `yaml:"available_days,omitempty"`
+    Sessions       []ClubSession  `yaml:"sessions"`
 }
 
 // ClubSession represents a type of session available at the gym/club
