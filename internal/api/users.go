@@ -168,3 +168,60 @@ func (s *Server) HandleSwitchUser(w http.ResponseWriter, r *http.Request) {
     // Redirect to dashboard
     http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+// HandleDeleteUser handles deleting a user
+func (s *Server) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    userIDStr := r.FormValue("user_id")
+    userID, err := strconv.Atoi(userIDStr)
+    if err != nil {
+        http.Error(w, "Invalid user ID", http.StatusBadRequest)
+        return
+    }
+
+    // Get user before deleting for logging
+    user, err := s.db.GetUser(userID)
+    if err != nil {
+        http.Error(w, "User not found", http.StatusNotFound)
+        return
+    }
+
+    // Check if this is the current user
+    cookie, err := r.Cookie(userIDCookie)
+    isCurrentUser := false
+    if err == nil && cookie.Value != "" {
+        currentUserID, err := strconv.Atoi(cookie.Value)
+        if err == nil && currentUserID == userID {
+            isCurrentUser = true
+        }
+    }
+
+    // Delete user (CASCADE will handle related records)
+    err = s.db.DeleteUser(userID)
+    if err != nil {
+        http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+        log.Printf("Error deleting user: %v", err)
+        return
+    }
+
+    log.Printf("Deleted user: %s (ID: %d)", user.Name, user.ID)
+
+    // If we deleted the current user, clear the cookie
+    if isCurrentUser {
+        http.SetCookie(w, &http.Cookie{
+            Name:     userIDCookie,
+            Value:    "",
+            Path:     "/",
+            MaxAge:   -1,
+            HttpOnly: true,
+            SameSite: http.SameSiteLaxMode,
+        })
+    }
+
+    // Redirect to users page
+    http.Redirect(w, r, "/users", http.StatusSeeOther)
+}

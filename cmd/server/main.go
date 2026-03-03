@@ -69,6 +69,7 @@ func main() {
     r.Get("/users", server.HandleUsers)
     r.Post("/users/create", server.HandleCreateUser)
     r.Post("/users/switch", server.HandleSwitchUser)
+    r.Post("/users/delete", server.HandleDeleteUser)
 
     // Calendar export routes
     r.Get("/calendar/export", server.HandleCalendarExport)

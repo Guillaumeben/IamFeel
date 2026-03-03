@@ -91,6 +91,16 @@ func (db *DB) UpdateUser(user *User) error {
     return nil
 }
 
+// DeleteUser deletes a user from the database
+func (db *DB) DeleteUser(userID int) error {
+    query := `DELETE FROM users WHERE id = ?`
+    _, err := db.conn.Exec(query, userID)
+    if err != nil {
+        return fmt.Errorf("failed to delete user: %w", err)
+    }
+    return nil
+}
+
 // GetAllUsers retrieves all users from the database
 func (db *DB) GetAllUsers() ([]*User, error) {
     query := `
