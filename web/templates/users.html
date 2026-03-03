@@ -22,7 +22,11 @@
     <main class="container">
         <div class="page-header">
             <h2>User Management</h2>
+            {{if .CurrentUser}}
             <p>Current User: <strong>{{.CurrentUser.Name}}</strong></p>
+            {{else}}
+            <p>No user selected. Create a new user below.</p>
+            {{end}}
         </div>
 
         <section class="settings-form">
