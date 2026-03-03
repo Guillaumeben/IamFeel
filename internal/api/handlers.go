@@ -1134,9 +1134,66 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         }
     }
 
-    // 6. Save gyms - for now we skip this since the gym table structure is different
-    // TODO: Implement gym saving when gym management UI is ready
-    // The gyms table expects separate entries for gyms and club_sessions table for sessions
+    // 6. Save gyms and club sessions
+    if err := s.db.ClearUserGyms(user.ID); err != nil {
+        log.Printf("Failed to clear gyms: %v", err)
+    }
+    for _, gym := range userConfig.Equipment.Gyms {
+        // Create gym
+        dbGym := &db.Gym{
+            UserID:     user.ID,
+            Name:       gym.Name,
+            Type:       gym.Type,
+            Membership: gym.Membership,
+        }
+        gymID, err := s.db.CreateGym(dbGym)
+        if err != nil {
+            log.Printf("Failed to create gym '%s': %v", gym.Name, err)
+            continue
+        }
+
+        // Create club sessions for this gym
+        for _, session := range gym.Sessions {
+            // Parse day of week and time from Occurrences field
+            // Occurrences format: "Monday 18:00, 60 min"
+            parts := strings.Split(session.Occurrences, ",")
+            dayTime := strings.TrimSpace(parts[0])
+            dayTimeParts := strings.Split(dayTime, " ")
+
+            var dayOfWeek, time string
+            var durationMinutes int
+
+            if len(dayTimeParts) >= 2 {
+                dayOfWeek = dayTimeParts[0]
+                time = dayTimeParts[1]
+            }
+
+            if len(parts) >= 2 {
+                durationStr := strings.TrimSpace(parts[1])
+                durationStr = strings.TrimSuffix(durationStr, " min")
+                durationStr = strings.TrimSpace(durationStr)
+                fmt.Sscanf(durationStr, "%d", &durationMinutes)
+            }
+
+            gymIDInt := int(gymID)
+            dbSession := &db.ClubSession{
+                UserID:          user.ID,
+                GymID:           &gymIDInt,
+                SessionName:     session.Name,
+                Description:     session.Description,
+                DayOfWeek:       dayOfWeek,
+                Time:            time,
+                DurationMinutes: durationMinutes,
+                SessionType:     "club",
+                CostType:        session.Cost,
+                Active:          true,
+            }
+
+            if _, err := s.db.CreateClubSession(dbSession); err != nil {
+                log.Printf("Failed to create club session '%s': %v", session.Name, err)
+            }
+        }
+    }
 
     // Redirect back to settings with success message
     data := s.NewSettingsData(user, userConfig)

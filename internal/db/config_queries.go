@@ -224,6 +224,15 @@ func (db *DB) DeleteGym(gymID int) error {
 	return nil
 }
 
+// ClearUserGyms deletes all gyms for a user
+func (db *DB) ClearUserGyms(userID int) error {
+	_, err := db.conn.Exec("DELETE FROM gyms WHERE user_id = ?", userID)
+	if err != nil {
+		return fmt.Errorf("failed to clear user gyms: %w", err)
+	}
+	return nil
+}
+
 // ==================== Club Session Functions ====================
 
 // GetGymSessions retrieves all club sessions for a gym
