@@ -31,7 +31,7 @@ func (db *DB) CreateUser(name string, age int, experienceLevel string) (*User, e
 // GetUser retrieves a user by ID
 func (db *DB) GetUser(userID int) (*User, error) {
     query := `
-        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
+        SELECT id, name, age, COALESCE(weight, 0), COALESCE(height, 0), experience_level, created_at, updated_at
         FROM users
         WHERE id = ?
     `
@@ -54,7 +54,7 @@ func (db *DB) GetUser(userID int) (*User, error) {
 // GetFirstUser gets the first user (for single-user setup)
 func (db *DB) GetFirstUser() (*User, error) {
     query := `
-        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
+        SELECT id, name, age, COALESCE(weight, 0), COALESCE(height, 0), experience_level, created_at, updated_at
         FROM users
         ORDER BY id ASC
         LIMIT 1
@@ -94,7 +94,7 @@ func (db *DB) UpdateUser(user *User) error {
 // GetAllUsers retrieves all users from the database
 func (db *DB) GetAllUsers() ([]*User, error) {
     query := `
-        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
+        SELECT id, name, age, COALESCE(weight, 0), COALESCE(height, 0), experience_level, created_at, updated_at
         FROM users
         ORDER BY created_at ASC
     `
