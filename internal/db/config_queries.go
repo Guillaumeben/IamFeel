@@ -164,7 +164,7 @@ func (db *DB) ClearUserEquipment(userID int) error {
 
 // GetUserGyms retrieves all gyms for a user
 func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
-	query := `SELECT id, user_id, name, type, membership, available_days, created_at, updated_at
+	query := `SELECT id, user_id, name, type, membership, available_days, sessions_limit, limit_period, created_at, updated_at
               FROM gyms WHERE user_id = ? ORDER BY name`
 
 	rows, err := db.conn.Query(query, userID)
@@ -177,7 +177,7 @@ func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
 	for rows.Next() {
 		var g Gym
 		if err := rows.Scan(&g.ID, &g.UserID, &g.Name, &g.Type, &g.Membership,
-			&g.AvailableDays, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			&g.AvailableDays, &g.SessionsLimit, &g.LimitPeriod, &g.CreatedAt, &g.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan gym: %w", err)
 		}
 		gyms = append(gyms, &g)
@@ -188,10 +188,10 @@ func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
 
 // CreateGym adds a new gym membership
 func (db *DB) CreateGym(gym *Gym) (int64, error) {
-	query := `INSERT INTO gyms (user_id, name, type, membership, available_days, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	query := `INSERT INTO gyms (user_id, name, type, membership, available_days, sessions_limit, limit_period, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 
-	result, err := db.conn.Exec(query, gym.UserID, gym.Name, gym.Type, gym.Membership, gym.AvailableDays)
+	result, err := db.conn.Exec(query, gym.UserID, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SessionsLimit, gym.LimitPeriod)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create gym: %w", err)
 	}
@@ -201,10 +201,10 @@ func (db *DB) CreateGym(gym *Gym) (int64, error) {
 
 // UpdateGym updates gym information
 func (db *DB) UpdateGym(gym *Gym) error {
-	query := `UPDATE gyms SET name = ?, type = ?, membership = ?, available_days = ?,
+	query := `UPDATE gyms SET name = ?, type = ?, membership = ?, available_days = ?, sessions_limit = ?, limit_period = ?,
               updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 
-	_, err := db.conn.Exec(query, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.ID)
+	_, err := db.conn.Exec(query, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SessionsLimit, gym.LimitPeriod, gym.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update gym: %w", err)
 	}

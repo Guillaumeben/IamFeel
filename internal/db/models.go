@@ -162,6 +162,8 @@ type Gym struct {
     Type           string    `json:"type"`
     Membership     string    `json:"membership"`
     AvailableDays  string    `json:"available_days"`
+    SessionsLimit  *int      `json:"sessions_limit"`  // Number of sessions for limited memberships
+    LimitPeriod    *string   `json:"limit_period"`    // "weekly" or "monthly"
     CreatedAt      time.Time `json:"created_at"`
     UpdatedAt      time.Time `json:"updated_at"`
 }
