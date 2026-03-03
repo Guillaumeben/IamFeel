@@ -27,9 +27,7 @@ user_config.yaml
 *.pem
 certs/
 
-# API keys
-anthropic_key.txt
-openai_key.txt
+# API keys (use environment variables instead)
 
 # IDE and editor files
 .vscode/
