@@ -31,14 +31,14 @@ func (db *DB) CreateUser(name string, age int, experienceLevel string) (*User, e
 // GetUser retrieves a user by ID
 func (db *DB) GetUser(userID int) (*User, error) {
     query := `
-        SELECT id, name, age, experience_level, created_at, updated_at
+        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
         FROM users
         WHERE id = ?
     `
 
     var user User
     err := db.conn.QueryRow(query, userID).Scan(
-        &user.ID, &user.Name, &user.Age, &user.ExperienceLevel,
+        &user.ID, &user.Name, &user.Age, &user.Weight, &user.Height, &user.ExperienceLevel,
         &user.CreatedAt, &user.UpdatedAt,
     )
     if err != nil {
@@ -54,7 +54,7 @@ func (db *DB) GetUser(userID int) (*User, error) {
 // GetFirstUser gets the first user (for single-user setup)
 func (db *DB) GetFirstUser() (*User, error) {
     query := `
-        SELECT id, name, age, experience_level, created_at, updated_at
+        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
         FROM users
         ORDER BY id ASC
         LIMIT 1
@@ -62,7 +62,7 @@ func (db *DB) GetFirstUser() (*User, error) {
 
     var user User
     err := db.conn.QueryRow(query).Scan(
-        &user.ID, &user.Name, &user.Age, &user.ExperienceLevel,
+        &user.ID, &user.Name, &user.Age, &user.Weight, &user.Height, &user.ExperienceLevel,
         &user.CreatedAt, &user.UpdatedAt,
     )
     if err != nil {
@@ -79,11 +79,11 @@ func (db *DB) GetFirstUser() (*User, error) {
 func (db *DB) UpdateUser(user *User) error {
     query := `
         UPDATE users
-        SET name = ?, age = ?, experience_level = ?, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, age = ?, weight = ?, height = ?, experience_level = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `
 
-    _, err := db.conn.Exec(query, user.Name, user.Age, user.ExperienceLevel, user.ID)
+    _, err := db.conn.Exec(query, user.Name, user.Age, user.Weight, user.Height, user.ExperienceLevel, user.ID)
     if err != nil {
         return fmt.Errorf("failed to update user: %w", err)
     }
@@ -94,7 +94,7 @@ func (db *DB) UpdateUser(user *User) error {
 // GetAllUsers retrieves all users from the database
 func (db *DB) GetAllUsers() ([]*User, error) {
     query := `
-        SELECT id, name, age, experience_level, created_at, updated_at
+        SELECT id, name, age, weight, height, experience_level, created_at, updated_at
         FROM users
         ORDER BY created_at ASC
     `
@@ -109,7 +109,7 @@ func (db *DB) GetAllUsers() ([]*User, error) {
     for rows.Next() {
         var user User
         err := rows.Scan(
-            &user.ID, &user.Name, &user.Age, &user.ExperienceLevel,
+            &user.ID, &user.Name, &user.Age, &user.Weight, &user.Height, &user.ExperienceLevel,
             &user.CreatedAt, &user.UpdatedAt,
         )
         if err != nil {
