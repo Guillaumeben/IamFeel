@@ -25,11 +25,8 @@ type UserInfo struct {
 
 // HandleUsers renders the users management page
 func (s *Server) HandleUsers(w http.ResponseWriter, r *http.Request) {
-    currentUser, err := GetCurrentUser(r)
-    if err != nil {
-        http.Error(w, "Failed to get current user", http.StatusInternalServerError)
-        return
-    }
+    // Try to get current user, but don't fail if there isn't one (for initial setup)
+    currentUser, _ := GetCurrentUser(r)
 
     allUsers, err := s.db.GetAllUsers()
     if err != nil {
@@ -41,26 +38,40 @@ func (s *Server) HandleUsers(w http.ResponseWriter, r *http.Request) {
     // Convert to UserInfo
     var usersInfo []*UserInfo
     for _, user := range allUsers {
+        isCurrent := false
+        if currentUser != nil {
+            isCurrent = user.ID == currentUser.ID
+        }
         usersInfo = append(usersInfo, &UserInfo{
             ID:              user.ID,
             Name:            user.Name,
             Age:             user.Age,
             ExperienceLevel: user.ExperienceLevel,
-            IsCurrent:       user.ID == currentUser.ID,
+            IsCurrent:       isCurrent,
         })
     }
 
-    data := UsersData{
-        CurrentUser: &UserInfo{
+    var currentUserInfo *UserInfo
+    themeClass := "theme-boxing" // Default
+    sportIcon := "🥊"             // Default
+
+    if currentUser != nil {
+        currentUserInfo = &UserInfo{
             ID:              currentUser.ID,
             Name:            currentUser.Name,
             Age:             currentUser.Age,
             ExperienceLevel: currentUser.ExperienceLevel,
             IsCurrent:       true,
-        },
-        AllUsers:   usersInfo,
-        ThemeClass: s.GetThemeClass(currentUser.ID),
-        SportIcon:  s.GetSportIconForUser(currentUser.ID),
+        }
+        themeClass = s.GetThemeClass(currentUser.ID)
+        sportIcon = s.GetSportIconForUser(currentUser.ID)
+    }
+
+    data := UsersData{
+        CurrentUser: currentUserInfo,
+        AllUsers:    usersInfo,
+        ThemeClass:  themeClass,
+        SportIcon:   sportIcon,
     }
 
     if err := s.templates.ExecuteTemplate(w, "users.html", data); err != nil {
