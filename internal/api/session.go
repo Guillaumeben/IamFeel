@@ -21,6 +21,12 @@ const (
 // UserMiddleware adds the current user to the request context
 func (s *Server) UserMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Skip user requirement for user management routes
+        if strings.HasPrefix(r.URL.Path, "/users") || strings.HasPrefix(r.URL.Path, "/static/") {
+            next.ServeHTTP(w, r)
+            return
+        }
+
         // Try to get user ID from cookie
         cookie, err := r.Cookie(userIDCookie)
         var user *db.User
@@ -40,7 +46,8 @@ func (s *Server) UserMiddleware(next http.Handler) http.Handler {
         if user == nil {
             user, err = s.db.GetFirstUser()
             if err != nil {
-                http.Error(w, "No users found. Please run onboarding first.", http.StatusInternalServerError)
+                // Redirect to users page if no users exist
+                http.Redirect(w, r, "/users", http.StatusSeeOther)
                 return
             }
             // Set cookie for first user
