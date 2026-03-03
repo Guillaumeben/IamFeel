@@ -326,7 +326,7 @@
 
                     <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
                         <p style="margin-bottom: 1rem; color: #6b7280;">Click the button below to generate a personalized weekly training plan. Make sure you've saved your settings first.</p>
-                        <button type="button" class="btn" style="background: #10b981; color: white;" onclick="window.location.href='/settings/generate-plan'">
+                        <button type="button" class="btn" style="background: #10b981; color: white;" onclick="generatePlan()">
                             Generate Weekly Plan
                         </button>
                     </div>
@@ -685,6 +685,14 @@
         }
 
         // Copy previous week functions
+        function generatePlan() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/settings/generate-plan';
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         function copyPreviousWeek(withAI) {
             const form = document.createElement('form');
             form.method = 'POST';
