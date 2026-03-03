@@ -6,8 +6,7 @@ import (
 )
 
 const (
-    defaultUserConfigPath = "data/user_config.yaml"
-    defaultDBPath         = "data/coach.db"
+    defaultDBPath = "data/coach.db"
 )
 
 func main() {

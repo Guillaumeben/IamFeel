@@ -7,7 +7,7 @@ import (
     "time"
 
     "github.com/tuxnam/iamfeel/internal/agent"
-    "github.com/tuxnam/iamfeel/internal/config"
+    "github.com/tuxnam/iamfeel/internal/api"
     "github.com/tuxnam/iamfeel/internal/db"
 )
 
@@ -16,11 +16,6 @@ func runPlanGeneration() error {
     fmt.Println("║            IamFeel - Weekly Plan Generation             ║")
     fmt.Println("╚══════════════════════════════════════════════════════════╝")
     fmt.Println()
-
-    // Check if user config exists
-    if _, err := os.Stat(defaultUserConfigPath); os.IsNotExist(err) {
-        return fmt.Errorf("user configuration not found. Please configure your profile in the web dashboard Settings page first")
-    }
 
     // Check if ANTHROPIC_API_KEY is set
     demoMode := os.Getenv("ANTHROPIC_API_KEY") == ""
@@ -31,14 +26,6 @@ func runPlanGeneration() error {
         fmt.Println("   https://console.anthropic.com/")
         fmt.Println()
     }
-
-    // Load user config
-    fmt.Println("📖 Loading your profile...")
-    userConfig, err := config.LoadUserConfig(defaultUserConfigPath)
-    if err != nil {
-        return fmt.Errorf("failed to load user config: %w", err)
-    }
-    fmt.Printf("✓ Loaded profile for %s\n", userConfig.User.Name)
 
     // Open database
     fmt.Println("🗄️  Connecting to database...")
@@ -54,6 +41,17 @@ func runPlanGeneration() error {
     if err != nil {
         return fmt.Errorf("failed to get user: %w", err)
     }
+
+    // Load user config from database
+    fmt.Println("📖 Loading your profile...")
+
+    // Create API server instance to use GetUserConfig
+    apiServer := api.NewServer(database)
+    userConfig, err := apiServer.GetUserConfig(user.ID)
+    if err != nil {
+        return fmt.Errorf("user configuration not found. Please configure your profile in the web dashboard Settings page first: %w", err)
+    }
+    fmt.Printf("✓ Loaded profile for %s\n", userConfig.User.Name)
 
     // Determine week to plan for
     now := time.Now()

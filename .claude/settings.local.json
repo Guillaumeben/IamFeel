@@ -6,7 +6,15 @@
       "Bash(curl:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill -9)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(go build:*)",
+      "Bash(kill:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nstyle: add vintage sport hero image to header background\n\nAdd dynamic header background with sport/fitness imagery:\n- Single hero image with vintage aesthetic\n- Grayscale and sepia filters for professional dark theme\n- Subtle overlay gradient for text readability\n- Cache-busting version parameter (v=14)\n- Maintains sticky header functionality\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(openssl req:*)",
+      "Bash(./bin/migrate:*)"
     ],
     "deny": [],
     "ask": []

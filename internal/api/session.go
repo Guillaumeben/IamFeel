@@ -8,7 +8,6 @@ import (
     "strconv"
     "strings"
 
-    "github.com/tuxnam/iamfeel/internal/config"
     "github.com/tuxnam/iamfeel/internal/db"
 )
 
@@ -97,8 +96,9 @@ func (s *Server) OnboardingMiddleware(next http.Handler) http.Handler {
             return
         }
 
-        // Check if user has a config
-        if !config.UserConfigExists(user.ID) {
+        // Check if user has basic profile in database
+        _, err = s.GetUserConfig(user.ID)
+        if err != nil {
             http.Redirect(w, r, "/onboard", http.StatusSeeOther)
             return
         }

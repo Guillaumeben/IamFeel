@@ -3,7 +3,6 @@ package config
 import (
     "fmt"
     "os"
-    "path/filepath"
 
     "gopkg.in/yaml.v3"
 )
@@ -34,52 +33,6 @@ func LoadSportConfig(path string) (*SportConfig, error) {
     return &config, nil
 }
 
-// LoadUserConfig loads a user configuration from a YAML file
-func LoadUserConfig(path string) (*UserConfig, error) {
-    data, err := os.ReadFile(path)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read user config file: %w", err)
-    }
-
-    var config UserConfig
-    if err := yaml.Unmarshal(data, &config); err != nil {
-        return nil, fmt.Errorf("failed to parse user config: %w", err)
-    }
-
-    // Basic validation
-    if config.User.Name == "" {
-        return nil, fmt.Errorf("user name is required")
-    }
-    if len(config.Sports) == 0 {
-        return nil, fmt.Errorf("at least one sport is required")
-    }
-
-    // Validate experience level
-    validLevels := map[string]bool{
-        "beginner":     true,
-        "intermediate": true,
-        "advanced":     true,
-    }
-    if !validLevels[config.User.ExperienceLevel] {
-        return nil, fmt.Errorf("invalid experience_level: %s (must be beginner, intermediate, or advanced)", config.User.ExperienceLevel)
-    }
-
-    return &config, nil
-}
-
-// SaveUserConfig saves a user configuration to a YAML file
-func SaveUserConfig(path string, config *UserConfig) error {
-    data, err := yaml.Marshal(config)
-    if err != nil {
-        return fmt.Errorf("failed to marshal user config: %w", err)
-    }
-
-    if err := os.WriteFile(path, data, 0644); err != nil {
-        return fmt.Errorf("failed to write user config file: %w", err)
-    }
-
-    return nil
-}
 
 // GetSessionType finds a session type by ID in a sport config
 func (sc *SportConfig) GetSessionType(id string) *SessionType {
@@ -115,26 +68,3 @@ func (uc *UserConfig) GetPrimarySport() *UserSport {
     return nil
 }
 
-// GetUserConfigPath returns the path for a user's config file
-func GetUserConfigPath(userID int) string {
-    return filepath.Join("data", fmt.Sprintf("user_%d_config.yaml", userID))
-}
-
-// LoadUserConfigByID loads a user configuration by user ID
-func LoadUserConfigByID(userID int) (*UserConfig, error) {
-    path := GetUserConfigPath(userID)
-    return LoadUserConfig(path)
-}
-
-// SaveUserConfigByID saves a user configuration by user ID
-func SaveUserConfigByID(userID int, config *UserConfig) error {
-    path := GetUserConfigPath(userID)
-    return SaveUserConfig(path, config)
-}
-
-// UserConfigExists checks if a config file exists for a user
-func UserConfigExists(userID int) bool {
-    path := GetUserConfigPath(userID)
-    _, err := os.Stat(path)
-    return err == nil
-}
