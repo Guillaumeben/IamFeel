@@ -44,6 +44,60 @@ func (db *DB) GetUserGoals(userID int) ([]*Goal, error) {
 	return goals, nil
 }
 
+// DeleteUserGoals deletes all goals for a user (used before re-inserting updated goals)
+func (db *DB) DeleteUserGoals(userID int) error {
+	_, err := db.conn.Exec("DELETE FROM goals WHERE user_id = ?", userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user goals: %w", err)
+	}
+	return nil
+}
+
+// CreateGoalSimple creates a new goal with minimal fields (for settings save)
+func (db *DB) CreateGoalSimple(userID int, goalType, description string) error {
+	query := `INSERT INTO goals (user_id, goal_type, description, completed, created_at, updated_at)
+	          VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	_, err := db.conn.Exec(query, userID, goalType, description)
+	if err != nil {
+		return fmt.Errorf("failed to create goal: %w", err)
+	}
+	return nil
+}
+
+// ==================== Sport Functions ====================
+
+// UpdatePrimarySport sets a sport as the primary sport for a user
+func (db *DB) UpdatePrimarySport(userID int, sportName string) error {
+	// First, unset all sports as non-primary
+	_, err := db.conn.Exec("UPDATE user_sports SET is_primary = 0 WHERE user_id = ?", userID)
+	if err != nil {
+		return fmt.Errorf("failed to unset primary sports: %w", err)
+	}
+
+	// Check if sport exists for user
+	var count int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM user_sports WHERE user_id = ? AND sport_name = ?", userID, sportName).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check sport existence: %w", err)
+	}
+
+	if count == 0 {
+		// Sport doesn't exist, create it
+		_, err = db.conn.Exec("INSERT INTO user_sports (user_id, sport_name, is_primary, created_at, updated_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", userID, sportName)
+		if err != nil {
+			return fmt.Errorf("failed to create primary sport: %w", err)
+		}
+	} else {
+		// Sport exists, set it as primary
+		_, err = db.conn.Exec("UPDATE user_sports SET is_primary = 1, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND sport_name = ?", userID, sportName)
+		if err != nil {
+			return fmt.Errorf("failed to update primary sport: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // ==================== Equipment Functions ====================
 
 // GetUserEquipment retrieves all equipment for a user

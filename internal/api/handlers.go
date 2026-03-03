@@ -1054,14 +1054,89 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     }
     userConfig.Equipment.Gyms = newGyms
 
-    // Save to per-user config file
-    if err := config.SaveUserConfigByID(user.ID, userConfig); err != nil {
-        log.Printf("Failed to save config: %v", err)
+    // Save to database instead of YAML
+    // 1. Save primary sport
+    if len(userConfig.Sports) > 0 && userConfig.Sports[0].Name != "" {
+        if err := s.db.UpdatePrimarySport(user.ID, userConfig.Sports[0].Name); err != nil {
+            log.Printf("Failed to save primary sport: %v", err)
+            data := s.NewSettingsData(user, userConfig)
+            data.Error = fmt.Sprintf("Failed to save primary sport: %v", err)
+            s.templates.ExecuteTemplate(w, "settings.html", data)
+            return
+        }
+    }
+
+    // 2. Save goals - delete all and re-insert
+    if err := s.db.DeleteUserGoals(user.ID); err != nil {
+        log.Printf("Failed to delete existing goals: %v", err)
         data := s.NewSettingsData(user, userConfig)
-        data.Error = fmt.Sprintf("Failed to save settings: %v", err)
+        data.Error = fmt.Sprintf("Failed to save goals: %v", err)
         s.templates.ExecuteTemplate(w, "settings.html", data)
         return
     }
+    for _, goal := range userConfig.Goals.ShortTerm {
+        if err := s.db.CreateGoalSimple(user.ID, "short_term", goal); err != nil {
+            log.Printf("Failed to save short-term goal: %v", err)
+        }
+    }
+    for _, goal := range userConfig.Goals.MediumTerm {
+        if err := s.db.CreateGoalSimple(user.ID, "medium_term", goal); err != nil {
+            log.Printf("Failed to save medium-term goal: %v", err)
+        }
+    }
+    for _, goal := range userConfig.Goals.LongTerm {
+        if err := s.db.CreateGoalSimple(user.ID, "long_term", goal); err != nil {
+            log.Printf("Failed to save long-term goal: %v", err)
+        }
+    }
+
+    // 3. Save availability
+    for day, avail := range userConfig.Availability {
+        dbAvail := &db.Availability{
+            UserID:    user.ID,
+            DayOfWeek: day,
+            Morning:   avail.Morning,
+            Lunch:     avail.Lunch,
+            Evening:   avail.Evening,
+        }
+        if err := s.db.UpsertAvailability(dbAvail); err != nil {
+            log.Printf("Failed to save availability for %s: %v", day, err)
+        }
+    }
+
+    // 4. Save preferences
+    prefs := &db.UserPreferences{
+        UserID:                    user.ID,
+        PrimaryGoal:               userConfig.Preferences.PrimaryGoal,
+        SessionsPerWeek:           userConfig.Preferences.SessionsPerWeek,
+        PreferredDuration:         userConfig.Preferences.PreferredDuration,
+        SessionDurationPreference: userConfig.Preferences.SessionDurationPreference,
+        IntensityPreference:       userConfig.Preferences.IntensityPreference,
+        RecoveryPriority:          userConfig.Preferences.RecoveryPriority,
+        PlanFrequency:             userConfig.Preferences.PlanFrequency,
+        Notes:                     userConfig.Preferences.Notes,
+    }
+    if err := s.db.UpsertUserPreferences(prefs); err != nil {
+        log.Printf("Failed to save preferences: %v", err)
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to save preferences: %v", err)
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
+    // 5. Save home equipment - clear and re-insert
+    if err := s.db.ClearUserEquipment(user.ID); err != nil {
+        log.Printf("Failed to clear equipment: %v", err)
+    }
+    for _, item := range userConfig.Equipment.Home {
+        if err := s.db.AddEquipment(user.ID, "home", item); err != nil {
+            log.Printf("Failed to save equipment '%s': %v", item, err)
+        }
+    }
+
+    // 6. Save gyms - for now we skip this since the gym table structure is different
+    // TODO: Implement gym saving when gym management UI is ready
+    // The gyms table expects separate entries for gyms and club_sessions table for sessions
 
     // Redirect back to settings with success message
     data := s.NewSettingsData(user, userConfig)
