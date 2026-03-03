@@ -17,6 +17,33 @@ func (db *DB) GetUserName(userID int) (string, error) {
 	return name, nil
 }
 
+// ==================== Goal Functions ====================
+
+// GetUserGoals retrieves all goals for a user
+func (db *DB) GetUserGoals(userID int) ([]*Goal, error) {
+	query := `SELECT id, user_id, goal_type, description, target_date, completed, completed_at, created_at, updated_at
+              FROM goals WHERE user_id = ? ORDER BY goal_type, description`
+
+	rows, err := db.conn.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query goals: %w", err)
+	}
+	defer rows.Close()
+
+	var goals []*Goal
+	for rows.Next() {
+		var goal Goal
+		err := rows.Scan(&goal.ID, &goal.UserID, &goal.GoalType, &goal.Description,
+			&goal.TargetDate, &goal.Completed, &goal.CompletedAt, &goal.CreatedAt, &goal.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan goal: %w", err)
+		}
+		goals = append(goals, &goal)
+	}
+
+	return goals, nil
+}
+
 // ==================== Equipment Functions ====================
 
 // GetUserEquipment retrieves all equipment for a user
