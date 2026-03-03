@@ -1138,7 +1138,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     if err := s.db.ClearUserGyms(user.ID); err != nil {
         log.Printf("Failed to clear gyms: %v", err)
     }
-    for _, gym := range userConfig.Equipment.Gyms {
+    for i, gym := range userConfig.Equipment.Gyms {
         // Create gym
         dbGym := &db.Gym{
             UserID:     user.ID,
@@ -1146,6 +1146,24 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
             Type:       gym.Type,
             Membership: gym.Membership,
         }
+
+        // Parse sessions limit fields if membership is "limited"
+        if gym.Membership == "limited" {
+            gymSessionsLimitSlice := r.Form["gym_sessions_limit[]"]
+            gymLimitPeriodSlice := r.Form["gym_limit_period[]"]
+
+            if i < len(gymSessionsLimitSlice) && gymSessionsLimitSlice[i] != "" {
+                if limit, err := strconv.Atoi(gymSessionsLimitSlice[i]); err == nil {
+                    dbGym.SessionsLimit = &limit
+                }
+            }
+
+            if i < len(gymLimitPeriodSlice) && gymLimitPeriodSlice[i] != "" {
+                period := gymLimitPeriodSlice[i]
+                dbGym.LimitPeriod = &period
+            }
+        }
+
         gymID, err := s.db.CreateGym(dbGym)
         if err != nil {
             log.Printf("Failed to create gym '%s': %v", gym.Name, err)

@@ -4,6 +4,7 @@ import (
     "fmt"
     "html/template"
     "path/filepath"
+    "reflect"
 
     "github.com/tuxnam/iamfeel/internal/config"
     "github.com/tuxnam/iamfeel/internal/db"
@@ -28,6 +29,19 @@ func NewServer(database *db.DB) *Server {
         },
         "printf": func(format string, args ...interface{}) string {
             return fmt.Sprintf(format, args...)
+        },
+        "deref": func(ptr interface{}) interface{} {
+            if ptr == nil {
+                return ""
+            }
+            val := reflect.ValueOf(ptr)
+            if val.Kind() == reflect.Ptr {
+                if val.IsNil() {
+                    return ""
+                }
+                return val.Elem().Interface()
+            }
+            return ptr
         },
     }
 
