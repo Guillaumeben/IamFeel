@@ -4,6 +4,8 @@ import (
     "log"
     "net/http"
     "strconv"
+
+    "github.com/tuxnam/iamfeel/internal/db"
 )
 
 // UsersData holds data for the users page
@@ -25,8 +27,15 @@ type UserInfo struct {
 
 // HandleUsers renders the users management page
 func (s *Server) HandleUsers(w http.ResponseWriter, r *http.Request) {
-    // Try to get current user, but don't fail if there isn't one (for initial setup)
-    currentUser, _ := GetCurrentUser(r)
+    // Try to get current user from cookie (don't use context since middleware is bypassed)
+    var currentUser *db.User
+    cookie, err := r.Cookie(userIDCookie)
+    if err == nil && cookie.Value != "" {
+        userID, err := strconv.Atoi(cookie.Value)
+        if err == nil {
+            currentUser, _ = s.db.GetUser(userID)
+        }
+    }
 
     allUsers, err := s.db.GetAllUsers()
     if err != nil {
