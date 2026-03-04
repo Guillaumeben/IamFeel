@@ -431,7 +431,7 @@
 
                         <h4>Available Sessions</h4>
                         <div class="sessions-tip">
-                            💡 <strong>Tip:</strong> <strong>Name</strong> the session briefly, <strong>describe what</strong> it involves, specify <strong>when</strong> it occurs (days/times/duration), and add the <strong>cost</strong>. Example: Name: "Sparring", Description: "Light to moderate sparring with partner rotation", Occurrences: "Wednesdays 7pm, 45 min"
+                            💡 <strong>Tip:</strong> Enter when the session occurs (e.g., "Monday 7pm and 8pm, Thursday 12:30pm"), the duration (e.g., "60 min"), and cost.
                         </div>
                         <div class="sessions-list" data-gym-index="{{$gymIndex}}">
                             {{range $sessionIndex, $session := $gym.Sessions}}
@@ -442,11 +442,15 @@
                                 </div>
                                 <div class="session-field session-field-large">
                                     <label class="session-label">Description</label>
-                                    <input type="text" name="gym_{{$gymIndex}}_session_description[]" value="{{$session.Description}}" placeholder="What it involves (e.g., Light sparring with partner rotation)" class="session-desc-input">
+                                    <input type="text" name="gym_{{$gymIndex}}_session_description[]" value="{{$session.Description}}" placeholder="What it involves" class="session-desc-input">
                                 </div>
-                                <div class="session-field">
-                                    <label class="session-label">When</label>
-                                    <input type="text" name="gym_{{$gymIndex}}_session_occurrences[]" value="{{$session.Occurrences}}" placeholder="e.g., Wednesdays 7pm, 45 min" class="session-occur-input">
+                                <div class="session-field session-field-large">
+                                    <label class="session-label">Days & Times</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_occurrences[]" value="{{$session.Occurrences}}" placeholder="e.g., Monday 7pm and 8pm, Thursday 12:30pm" class="session-occur-input">
+                                </div>
+                                <div class="session-field session-field-small">
+                                    <label class="session-label">Duration</label>
+                                    <input type="text" name="gym_{{$gymIndex}}_session_duration[]" value="{{$session.Duration}}" placeholder="e.g., 60 min" class="session-duration-input">
                                 </div>
                                 <div class="session-field session-field-small">
                                     <label class="session-label">Cost</label>

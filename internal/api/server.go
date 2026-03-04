@@ -95,12 +95,14 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
 
         clubSessions := []config.ClubSession{}
         for _, session := range sessions {
-            // Format occurrences from database fields
-            occurrences := fmt.Sprintf("%s %s, %d min", session.DayOfWeek, session.Time, session.DurationMinutes)
+            // Format occurrences (days & times) and duration separately
+            occurrences := fmt.Sprintf("%s %s", session.DayOfWeek, session.Time)
+            duration := fmt.Sprintf("%d min", session.DurationMinutes)
             clubSessions = append(clubSessions, config.ClubSession{
                 Name:        session.SessionName,
                 Description: session.Description,
                 Occurrences: occurrences,
+                Duration:    duration,
                 Cost:        session.CostType,
             })
         }

@@ -1018,6 +1018,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         sessionNames := r.Form[fmt.Sprintf("gym_%d_session_name[]", i)]
         sessionDescriptions := r.Form[fmt.Sprintf("gym_%d_session_description[]", i)]
         sessionOccurrences := r.Form[fmt.Sprintf("gym_%d_session_occurrences[]", i)]
+        sessionDurations := r.Form[fmt.Sprintf("gym_%d_session_duration[]", i)]
         sessionCosts := r.Form[fmt.Sprintf("gym_%d_session_cost[]", i)]
 
         for j := range sessionNames {
@@ -1036,6 +1037,11 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 sessionOccur = strings.TrimSpace(sessionOccurrences[j])
             }
 
+            sessionDuration := ""
+            if j < len(sessionDurations) {
+                sessionDuration = strings.TrimSpace(sessionDurations[j])
+            }
+
             sessionCost := ""
             if j < len(sessionCosts) {
                 sessionCost = strings.TrimSpace(sessionCosts[j])
@@ -1045,6 +1051,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 Name:        sessionName,
                 Description: sessionDesc,
                 Occurrences: sessionOccur,
+                Duration:    sessionDuration,
                 Cost:        sessionCost,
             }
             gym.Sessions = append(gym.Sessions, session)
@@ -1173,21 +1180,22 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         // Create club sessions for this gym
         for _, session := range gym.Sessions {
             // Parse day of week and time from Occurrences field
-            // Occurrences format: "Monday 18:00, 60 min"
-            parts := strings.Split(session.Occurrences, ",")
-            dayTime := strings.TrimSpace(parts[0])
-            dayTimeParts := strings.Split(dayTime, " ")
+            // Occurrences format: "Monday 7pm and 8pm, Thursday 12:30pm"
+            // Duration is separate now: "60 min"
+            dayTimeParts := strings.Split(strings.TrimSpace(session.Occurrences), " ")
 
             var dayOfWeek, time string
             var durationMinutes int
 
+            // Extract first day and first time from occurrences
             if len(dayTimeParts) >= 2 {
                 dayOfWeek = dayTimeParts[0]
                 time = dayTimeParts[1]
             }
 
-            if len(parts) >= 2 {
-                durationStr := strings.TrimSpace(parts[1])
+            // Parse duration from Duration field
+            if session.Duration != "" {
+                durationStr := strings.TrimSpace(session.Duration)
                 durationStr = strings.TrimSuffix(durationStr, " min")
                 durationStr = strings.TrimSpace(durationStr)
                 fmt.Sscanf(durationStr, "%d", &durationMinutes)
@@ -1199,6 +1207,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 GymID:           &gymIDInt,
                 SessionName:     session.Name,
                 Description:     session.Description,
+                Occurrences:     session.Occurrences,
                 DayOfWeek:       dayOfWeek,
                 Time:            time,
                 DurationMinutes: durationMinutes,

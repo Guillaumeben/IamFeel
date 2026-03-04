@@ -121,7 +121,8 @@ type Gym struct {
 type ClubSession struct {
     Name        string `yaml:"name"`
     Description string `yaml:"description"`
-    Occurrences string `yaml:"occurrences,omitempty"` // e.g., "Tuesdays & Thursdays 7pm, 60 min"
+    Occurrences string `yaml:"occurrences,omitempty"` // e.g., "Monday 7pm and 8pm, Thursday 12:30pm"
+    Duration    string `yaml:"duration,omitempty"`    // e.g., "60 min"
     Cost        string `yaml:"cost,omitempty"`        // e.g., "included", "$10", "$15/session"
 }
 
