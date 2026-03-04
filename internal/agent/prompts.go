@@ -3,8 +3,6 @@ package agent
 import (
     "fmt"
     "strings"
-
-    "github.com/tuxnam/iamfeel/internal/config"
 )
 
 const baseSystemPrompt = `You are an expert training coach and programming assistant. Your role is to create personalized, effective training plans based on the athlete's profile, goals, training history, and current phase.
@@ -65,63 +63,12 @@ NEXT WEEK PREVIEW:
 Be specific and actionable. The athlete should know exactly what to do each day.
 `
 
-// BuildSystemPrompt creates the complete system prompt with sport-specific context
-func BuildSystemPrompt(sportConfig *config.SportConfig, coachingStyle string, explanationDetail string) string {
+// BuildSystemPrompt creates the complete system prompt with coaching preferences
+func BuildSystemPrompt(coachingStyle string, explanationDetail string) string {
     var sb strings.Builder
 
     sb.WriteString(baseSystemPrompt)
     sb.WriteString("\n\n")
-
-    // Add sport-specific context
-    sb.WriteString("## Sport-Specific Context\n\n")
-    sb.WriteString(fmt.Sprintf("**Sport**: %s (%s)\n\n", sportConfig.SportName, sportConfig.SportType))
-
-    // Add agent context from sport config
-    if sportConfig.AgentContext != "" {
-        sb.WriteString("### Coaching Guidelines for This Sport\n\n")
-        sb.WriteString(sportConfig.AgentContext)
-        sb.WriteString("\n\n")
-    }
-
-    // Add available session types
-    sb.WriteString("### Available Session Types\n\n")
-    for _, st := range sportConfig.SessionTypes {
-        sb.WriteString(fmt.Sprintf("**%s** (%s)\n", st.Name, st.ID))
-        sb.WriteString(fmt.Sprintf("- Description: %s\n", st.Description))
-        sb.WriteString(fmt.Sprintf("- Typical Duration: %s\n", st.TypicalDurationMinutes))
-        sb.WriteString(fmt.Sprintf("- Intensity: %s\n", st.Intensity))
-        sb.WriteString(fmt.Sprintf("- Primary Adaptation: %s\n", st.PrimaryAdaptation))
-        sb.WriteString(fmt.Sprintf("- Recovery Impact: %s\n", st.RecoveryImpact))
-        if st.Notes != "" {
-            sb.WriteString(fmt.Sprintf("- Notes: %s\n", st.Notes))
-        }
-        sb.WriteString("\n")
-    }
-
-    // Add recovery guidelines
-    sb.WriteString("### Recovery Guidelines\n\n")
-    sb.WriteString("Consider these recovery requirements when scheduling sessions:\n\n")
-    for intensity, recovery := range sportConfig.RecoveryGuidelines {
-        sb.WriteString(fmt.Sprintf("**%s**: %d days before next hard session, %d days before same type",
-            intensity, recovery.RestBeforeNextHardSession, recovery.RestBeforeSameType))
-        if recovery.Notes != "" {
-            sb.WriteString(fmt.Sprintf(" (%s)", recovery.Notes))
-        }
-        sb.WriteString("\n")
-    }
-    sb.WriteString("\n")
-
-    // Add training phases
-    sb.WriteString("### Training Phases\n\n")
-    for _, phase := range sportConfig.Phases {
-        sb.WriteString(fmt.Sprintf("**%s**\n", phase.DisplayName))
-        sb.WriteString(fmt.Sprintf("- Focus: %s\n", phase.Focus))
-        sb.WriteString("- Priorities:\n")
-        for _, priority := range phase.Priorities {
-            sb.WriteString(fmt.Sprintf("  - %s\n", priority))
-        }
-        sb.WriteString("\n")
-    }
 
     // Add coaching style adjustment
     sb.WriteString("## Coaching Style\n\n")
@@ -159,8 +106,11 @@ func BuildUserPrompt(userContext *UserContext) string {
     sb.WriteString("## Athlete Profile\n\n")
     sb.WriteString(fmt.Sprintf("- Name: %s\n", userContext.Name))
     sb.WriteString(fmt.Sprintf("- Age: %d\n", userContext.Age))
-    sb.WriteString(fmt.Sprintf("- Experience Level: %s\n", userContext.ExperienceLevel))
-    sb.WriteString(fmt.Sprintf("- Sport Experience: %d years\n", userContext.SportExperienceYears))
+    sb.WriteString(fmt.Sprintf("- General Fitness Level: %s\n", userContext.ExperienceLevel))
+    sb.WriteString(fmt.Sprintf("- Experience in %s: %d years\n", userContext.SportName, userContext.SportExperienceYears))
+    if userContext.SportExperienceYears == 0 {
+        sb.WriteString("  **Note**: This athlete is NEW to this specific sport, despite having general fitness experience. Focus on teaching fundamentals, proper technique, and gradual progression.\n")
+    }
     sb.WriteString("\n")
 
     // Current phase
@@ -279,6 +229,14 @@ func BuildUserPrompt(userContext *UserContext) string {
         sb.WriteString(fmt.Sprintf("- Session Duration: %s\n", userContext.SessionDurationPreference))
     }
     sb.WriteString("\n")
+
+    // Special constraints/requests from user (if provided)
+    if userContext.SpecialConstraints != "" {
+        sb.WriteString("## Special Requests & Constraints\n\n")
+        sb.WriteString(userContext.SpecialConstraints)
+        sb.WriteString("\n\n")
+        sb.WriteString("**IMPORTANT**: Please take the above constraints into account when creating this week's plan.\n\n")
+    }
 
     // Request
     sb.WriteString("## Request\n\n")

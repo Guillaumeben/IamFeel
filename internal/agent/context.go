@@ -14,6 +14,7 @@ type UserContext struct {
     Name                string
     Age                 int
     ExperienceLevel     string
+    SportName            string
     SportExperienceYears int
 
     // Current phase
@@ -42,6 +43,9 @@ type UserContext struct {
     IntensityPreference       string
     RecoveryPriority          string
     SessionDurationPreference string
+
+    // Special constraints from user
+    SpecialConstraints string
 
     // Plan timing
     WeekStart string
@@ -96,6 +100,7 @@ func LoadUserContext(database *db.DB, userConfig *config.UserConfig, weekStart t
         return nil, fmt.Errorf("no primary sport configured")
     }
 
+    ctx.SportName = primarySport.Name
     ctx.SportExperienceYears = primarySport.ExperienceYears
     ctx.CurrentPhaseName = primarySport.CurrentPhase
     ctx.PhaseStartDate = primarySport.PhaseStartDate

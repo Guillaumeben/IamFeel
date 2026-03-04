@@ -736,6 +736,7 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
     // Load user config, or create default if doesn't exist
     userConfig, err := s.GetUserConfig(user.ID)
     if err != nil {
+        log.Printf("ERROR loading user config for user %d: %v - CREATING DEFAULT CONFIG", user.ID, err)
         // Create a minimal default config
         userConfig = &config.UserConfig{
             User: config.UserProfile{
@@ -768,7 +769,7 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
                 PreferredDuration: 60,
             },
             Coach: config.CoachSettings{
-                Model:             "claude-3-5-sonnet-20241022",
+                Model:             "claude-haiku-4-5",
                 Temperature:       0.7,
                 CoachingStyle:     "motivational",
                 ExplanationDetail: "balanced",
@@ -781,6 +782,10 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
             },
         }
         log.Printf("Created default config for user %d", user.ID)
+    } else {
+        log.Printf("Successfully loaded user config for user %d - Availability days: %d, Equipment: %d, Goals: %d/%d/%d",
+            user.ID, len(userConfig.Availability), len(userConfig.Equipment.Home),
+            len(userConfig.Goals.ShortTerm), len(userConfig.Goals.MediumTerm), len(userConfig.Goals.LongTerm))
     }
 
     data := s.NewSettingsData(user, userConfig)
@@ -841,7 +846,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 PreferredDuration: 60,
             },
             Coach: config.CoachSettings{
-                Model:             "claude-3-5-sonnet-20241022",
+                Model:             "claude-haiku-4-5",
                 Temperature:       0.7,
                 CoachingStyle:     "motivational",
                 ExplanationDetail: "balanced",
@@ -906,6 +911,18 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         }
         if !found {
             userConfig.Sports = []config.UserSport{{Name: sport, Primary: true}}
+        }
+    }
+
+    // Update sport experience years
+    if experienceYears := r.FormValue("sport_experience_years"); experienceYears != "" {
+        if years, err := strconv.Atoi(experienceYears); err == nil {
+            for i := range userConfig.Sports {
+                if userConfig.Sports[i].Primary {
+                    userConfig.Sports[i].ExperienceYears = years
+                    break
+                }
+            }
         }
     }
 
@@ -1131,6 +1148,37 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // 5. Save coach settings
+    if coachModel := r.FormValue("coach_model"); coachModel != "" {
+        userConfig.Coach.Model = coachModel
+    }
+    if coachTemp := r.FormValue("coach_temperature"); coachTemp != "" {
+        if temp, err := strconv.ParseFloat(coachTemp, 64); err == nil {
+            userConfig.Coach.Temperature = temp
+        }
+    }
+    if coachingStyle := r.FormValue("coaching_style"); coachingStyle != "" {
+        userConfig.Coach.CoachingStyle = coachingStyle
+    }
+    if explanationDetail := r.FormValue("explanation_detail"); explanationDetail != "" {
+        userConfig.Coach.ExplanationDetail = explanationDetail
+    }
+
+    coachSettings := &db.CoachSettings{
+        UserID:            user.ID,
+        Model:             userConfig.Coach.Model,
+        Temperature:       userConfig.Coach.Temperature,
+        CoachingStyle:     userConfig.Coach.CoachingStyle,
+        ExplanationDetail: userConfig.Coach.ExplanationDetail,
+    }
+    if err := s.db.UpsertCoachSettings(coachSettings); err != nil {
+        log.Printf("Failed to save coach settings: %v", err)
+        data := s.NewSettingsData(user, userConfig)
+        data.Error = fmt.Sprintf("Failed to save coach settings: %v", err)
+        s.templates.ExecuteTemplate(w, "settings.html", data)
+        return
+    }
+
     // 5. Save home equipment - clear and re-insert
     if err := s.db.ClearUserEquipment(user.ID); err != nil {
         log.Printf("Failed to clear equipment: %v", err)
@@ -1181,18 +1229,10 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         for _, session := range gym.Sessions {
             // Parse day of week and time from Occurrences field
             // Occurrences format: "Monday 7pm and 8pm, Thursday 12:30pm"
+            // or "Thursday 12:30, Thursday 17:30"
             // Duration is separate now: "60 min"
-            dayTimeParts := strings.Split(strings.TrimSpace(session.Occurrences), " ")
 
-            var dayOfWeek, time string
             var durationMinutes int
-
-            // Extract first day and first time from occurrences
-            if len(dayTimeParts) >= 2 {
-                dayOfWeek = dayTimeParts[0]
-                time = dayTimeParts[1]
-            }
-
             // Parse duration from Duration field
             if session.Duration != "" {
                 durationStr := strings.TrimSpace(session.Duration)
@@ -1201,23 +1241,44 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 fmt.Sscanf(durationStr, "%d", &durationMinutes)
             }
 
-            gymIDInt := int(gymID)
-            dbSession := &db.ClubSession{
-                UserID:          user.ID,
-                GymID:           &gymIDInt,
-                SessionName:     session.Name,
-                Description:     session.Description,
-                Occurrences:     session.Occurrences,
-                DayOfWeek:       dayOfWeek,
-                Time:            time,
-                DurationMinutes: durationMinutes,
-                SessionType:     "club",
-                CostType:        session.Cost,
-                Active:          true,
-            }
+            // Split by comma to handle multiple day/time pairs
+            occurrencePairs := strings.Split(session.Occurrences, ",")
 
-            if _, err := s.db.CreateClubSession(dbSession); err != nil {
-                log.Printf("Failed to create club session '%s': %v", session.Name, err)
+            for _, pair := range occurrencePairs {
+                pair = strings.TrimSpace(pair)
+                if pair == "" {
+                    continue
+                }
+
+                // Extract day and time from each pair (e.g., "Thursday 12:30")
+                dayTimeParts := strings.Fields(pair)
+
+                var dayOfWeek, time string
+                if len(dayTimeParts) >= 2 {
+                    dayOfWeek = dayTimeParts[0]
+                    time = dayTimeParts[1]
+                } else {
+                    continue // Skip invalid entries
+                }
+
+                gymIDInt := int(gymID)
+                dbSession := &db.ClubSession{
+                    UserID:          user.ID,
+                    GymID:           &gymIDInt,
+                    SessionName:     session.Name,
+                    Description:     session.Description,
+                    Occurrences:     session.Occurrences,
+                    Cost:            session.Cost,
+                    DayOfWeek:       dayOfWeek,
+                    Time:            time,
+                    DurationMinutes: durationMinutes,
+                    SessionType:     "club",
+                    Active:          true,
+                }
+
+                if _, err := s.db.CreateClubSession(dbSession); err != nil {
+                    log.Printf("Failed to create club session '%s' for %s %s: %v", session.Name, dayOfWeek, time, err)
+                }
             }
         }
     }
@@ -1238,12 +1299,6 @@ func validatePlanGenerationSettings(userConfig *config.UserConfig) []string {
     // Check primary sport
     if len(userConfig.Sports) == 0 || userConfig.Sports[0].Name == "" {
         errors = append(errors, "Primary sport must be selected")
-    } else {
-        // Check if sport config file exists
-        sportName := userConfig.Sports[0].Name
-        if _, err := config.LoadSportConfig(sportName); err != nil {
-            errors = append(errors, fmt.Sprintf("Sport configuration for '%s' not found", sportName))
-        }
     }
 
     // Check at least one goal
@@ -1323,9 +1378,17 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Parse form to get special constraints
+    if err := r.ParseForm(); err != nil {
+        http.Error(w, "Failed to parse form", http.StatusBadRequest)
+        return
+    }
+
+    specialConstraints := r.FormValue("plan_constraints")
+
     // Generate plan
     weekStart := agent.GetWeekStart(time.Now())
-    planText, err := agent.GenerateWeeklyPlan(r.Context(), s.db, userConfig, weekStart)
+    planText, err := agent.GenerateWeeklyPlan(r.Context(), s.db, userConfig, weekStart, specialConstraints)
     if err != nil {
         log.Printf("Failed to generate plan: %v", err)
         data := s.NewSettingsData(user, userConfig)

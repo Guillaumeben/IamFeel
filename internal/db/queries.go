@@ -152,6 +152,21 @@ func (db *DB) CreateTrainingSession(session *TrainingSession) error {
     ).Scan(&session.ID, &session.CreatedAt, &session.UpdatedAt)
 }
 
+// DeletePlannedSessionsForWeek deletes all planned (not completed/skipped) sessions for a given week
+func (db *DB) DeletePlannedSessionsForWeek(userID int, weekStart, weekEnd time.Time) error {
+    query := `
+        DELETE FROM training_sessions
+        WHERE user_id = ?
+          AND session_date BETWEEN ? AND ?
+          AND planned = 1
+          AND completed = 0
+          AND skipped = 0
+    `
+
+    _, err := db.conn.Exec(query, userID, weekStart, weekEnd)
+    return err
+}
+
 // GetTrainingSessions retrieves training sessions for a user within a date range
 func (db *DB) GetTrainingSessions(userID int, startDate, endDate time.Time) ([]*TrainingSession, error) {
     query := `

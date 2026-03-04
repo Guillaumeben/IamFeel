@@ -116,6 +116,12 @@ func extractDaySession(planText string, day string) *PlannedSession {
 
 // CreatePlannedSessions creates planned training sessions in the database
 func CreatePlannedSessions(database *db.DB, userID int, weekStart time.Time, planText string) error {
+	// First, delete any existing planned sessions for this week
+	weekEnd := weekStart.AddDate(0, 0, 6)
+	if err := database.DeletePlannedSessionsForWeek(userID, weekStart, weekEnd); err != nil {
+		return fmt.Errorf("failed to delete old planned sessions: %w", err)
+	}
+
 	sessions := ParsePlanForSessions(planText, weekStart)
 
 	fmt.Printf("📅 Parsed %d planned sessions from plan\n", len(sessions))

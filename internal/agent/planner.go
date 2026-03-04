@@ -15,16 +15,12 @@ func GenerateWeeklyPlan(
     database *db.DB,
     userConfig *config.UserConfig,
     weekStart time.Time,
+    specialConstraints string,
 ) (string, error) {
-    // Load sport config
+    // Verify primary sport is configured
     primarySport := userConfig.GetPrimarySport()
     if primarySport == nil {
         return "", fmt.Errorf("no primary sport configured")
-    }
-
-    sportConfig, err := config.LoadSportConfig(primarySport.ConfigFile)
-    if err != nil {
-        return "", fmt.Errorf("failed to load sport config: %w", err)
     }
 
     // Create AI client
@@ -35,7 +31,6 @@ func GenerateWeeklyPlan(
 
     // Build system prompt
     systemPrompt := BuildSystemPrompt(
-        sportConfig,
         userConfig.Coach.CoachingStyle,
         userConfig.Coach.ExplanationDetail,
     )
@@ -45,6 +40,9 @@ func GenerateWeeklyPlan(
     if err != nil {
         return "", fmt.Errorf("failed to load user context: %w", err)
     }
+
+    // Add special constraints if provided
+    userContext.SpecialConstraints = specialConstraints
 
     // Build user prompt
     userPrompt := BuildUserPrompt(userContext)
@@ -133,15 +131,10 @@ func GenerateDayModification(
     dayName string,
     modificationReason string,
 ) (string, error) {
-    // Load sport config
+    // Verify primary sport is configured
     primarySport := userConfig.GetPrimarySport()
     if primarySport == nil {
         return "", fmt.Errorf("no primary sport configured")
-    }
-
-    sportConfig, err := config.LoadSportConfig(primarySport.ConfigFile)
-    if err != nil {
-        return "", fmt.Errorf("failed to load sport config: %w", err)
     }
 
     // Create AI client
@@ -152,7 +145,6 @@ func GenerateDayModification(
 
     // Build system prompt
     systemPrompt := BuildSystemPrompt(
-        sportConfig,
         userConfig.Coach.CoachingStyle,
         userConfig.Coach.ExplanationDetail,
     )
@@ -184,15 +176,10 @@ func AdjustWeeklyPlan(
     previousPlan string,
     adjustmentNotes string,
 ) (string, error) {
-    // Load sport config
+    // Verify primary sport is configured
     primarySport := userConfig.GetPrimarySport()
     if primarySport == nil {
         return "", fmt.Errorf("no primary sport configured")
-    }
-
-    sportConfig, err := config.LoadSportConfig(primarySport.ConfigFile)
-    if err != nil {
-        return "", fmt.Errorf("failed to load sport config: %w", err)
     }
 
     // Create AI client
@@ -203,7 +190,6 @@ func AdjustWeeklyPlan(
 
     // Build system prompt
     systemPrompt := BuildSystemPrompt(
-        sportConfig,
         userConfig.Coach.CoachingStyle,
         userConfig.Coach.ExplanationDetail,
     )

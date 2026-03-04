@@ -64,6 +64,7 @@
             <button type="button" class="tab-button active" onclick="switchTab('profile', this)">👤 Profile</button>
             <button type="button" class="tab-button" onclick="switchTab('equipment', this)">🏋️ Equipment & Gyms</button>
             <button type="button" class="tab-button" onclick="switchTab('training', this)">📋 Training Setup</button>
+            <button type="button" class="tab-button" onclick="switchTab('coach', this)">🤖 AI Coach</button>
         </div>
 
         <form method="POST" action="/settings" class="settings-form">
@@ -98,7 +99,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="user_experience">Experience Level *</label>
+                        <label for="user_experience">General Fitness Level *</label>
                         <select id="user_experience" name="user_experience" required>
                             <option value="beginner" {{if eq .User.ExperienceLevel "beginner"}}selected{{end}}>Beginner</option>
                             <option value="intermediate" {{if eq .User.ExperienceLevel "intermediate"}}selected{{end}}>Intermediate</option>
@@ -126,6 +127,13 @@
                             <option value="swimming" {{if eq $primarySport "swimming"}}selected{{end}}>Swimming 🏊</option>
                             <option value="crossfit" {{if eq $primarySport "crossfit"}}selected{{end}}>CrossFit 🏋️</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sport_experience_years">Years of Experience in This Sport *</label>
+                        {{$sportExperience := 0}}
+                        {{range .Config.Sports}}{{if .Primary}}{{$sportExperience = .ExperienceYears}}{{end}}{{end}}
+                        <input type="number" id="sport_experience_years" name="sport_experience_years" value="{{$sportExperience}}" min="0" max="50" step="1" required placeholder="e.g., 2">
                     </div>
 
                     <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 2rem;">
@@ -317,6 +325,55 @@
                 </section>
             </div>
 
+            <!-- AI Coach Tab -->
+            <div id="coach-tab" class="tab-content">
+                <section class="settings-section">
+                    <h3>🤖 AI Coach Configuration</h3>
+                    <p class="section-description">Customize how your AI coach generates training plans</p>
+
+                    <div class="form-group">
+                        <label for="coach_model">AI Model</label>
+                        <select id="coach_model" name="coach_model">
+                            <option value="claude-haiku-4-5" {{if eq .Config.Coach.Model "claude-haiku-4-5"}}selected{{end}}>Claude Haiku 4.5 (Fast & Cost-Effective)</option>
+                            <option value="claude-sonnet-4-5" {{if eq .Config.Coach.Model "claude-sonnet-4-5"}}selected{{end}}>Claude Sonnet 4.5 (Balanced)</option>
+                            <option value="claude-opus-4" {{if eq .Config.Coach.Model "claude-opus-4"}}selected{{end}}>Claude Opus 4 (Most Advanced)</option>
+                        </select>
+                        <small>Haiku is recommended for most users. Sonnet and Opus provide more detailed plans but cost more.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="coach_temperature">Creativity Level</label>
+                        <input type="range" id="coach_temperature" name="coach_temperature" min="0" max="1" step="0.1" value="{{.Config.Coach.Temperature}}" oninput="document.getElementById('temperature_value').textContent = this.value">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <small>Consistent</small>
+                            <strong id="temperature_value">{{.Config.Coach.Temperature}}</strong>
+                            <small>Creative</small>
+                        </div>
+                        <small>Lower values (0.0-0.5) produce more consistent plans. Higher values (0.6-1.0) introduce more variety.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="coaching_style">Coaching Style</label>
+                        <select id="coaching_style" name="coaching_style">
+                            <option value="balanced" {{if eq .Config.Coach.CoachingStyle "balanced"}}selected{{end}}>Balanced - Middle ground between pushing and recovery</option>
+                            <option value="aggressive" {{if eq .Config.Coach.CoachingStyle "aggressive"}}selected{{end}}>Aggressive - Push hard, high volume</option>
+                            <option value="supportive" {{if eq .Config.Coach.CoachingStyle "supportive"}}selected{{end}}>Supportive - Focus on recovery and confidence</option>
+                        </select>
+                        <small>Choose how your coach approaches training intensity and volume</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="explanation_detail">Explanation Detail</label>
+                        <select id="explanation_detail" name="explanation_detail">
+                            <option value="brief" {{if eq .Config.Coach.ExplanationDetail "brief"}}selected{{end}}>Brief - Concise, action-focused</option>
+                            <option value="moderate" {{if eq .Config.Coach.ExplanationDetail "moderate"}}selected{{end}}>Moderate - Balanced detail</option>
+                            <option value="detailed" {{if eq .Config.Coach.ExplanationDetail "detailed"}}selected{{end}}>Detailed - In-depth explanations with rationale</option>
+                        </select>
+                        <small>How much explanation and context do you want in your training plans?</small>
+                    </div>
+                </section>
+            </div>
+
             <!-- Training Setup Tab -->
             <div id="training-tab" class="tab-content">
 
@@ -325,6 +382,11 @@
                     <p class="section-description">Generate a new weekly training plan based on your current settings</p>
 
                     <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="plan_constraints">Special Requests or Constraints (Optional)</label>
+                            <textarea id="plan_constraints" name="plan_constraints" rows="4" placeholder="e.g., 'I have a sore shoulder, avoid overhead movements', 'Focus more on cardio this week', 'I have a competition in 2 weeks'"></textarea>
+                            <small>Add any specific requests, injuries, upcoming events, or constraints for this week's plan. This will be sent to the AI coach.</small>
+                        </div>
                         <p style="margin-bottom: 1rem; color: #6b7280;">Click the button below to generate a personalized weekly training plan. Make sure you've saved your settings first.</p>
                         <button type="button" class="btn" style="background: #10b981; color: white;" onclick="generatePlan()">
                             Generate Weekly Plan
@@ -677,11 +739,15 @@
                 </div>
                 <div class="session-field session-field-large">
                     <label class="session-label">Description</label>
-                    <input type="text" name="gym_${gymIndex}_session_description[]" value="" placeholder="What it involves (e.g., Light sparring with partner rotation)" class="session-desc-input">
+                    <input type="text" name="gym_${gymIndex}_session_description[]" value="" placeholder="What it involves" class="session-desc-input">
                 </div>
-                <div class="session-field">
-                    <label class="session-label">When</label>
-                    <input type="text" name="gym_${gymIndex}_session_occurrences[]" value="" placeholder="e.g., Wednesdays 7pm, 45 min" class="session-occur-input">
+                <div class="session-field session-field-large">
+                    <label class="session-label">Days & Times</label>
+                    <input type="text" name="gym_${gymIndex}_session_occurrences[]" value="" placeholder="e.g., Monday 7pm and 8pm, Thursday 12:30pm" class="session-occur-input">
+                </div>
+                <div class="session-field session-field-small">
+                    <label class="session-label">Duration</label>
+                    <input type="text" name="gym_${gymIndex}_session_duration[]" value="" placeholder="e.g., 60 min" class="session-duration-input">
                 </div>
                 <div class="session-field session-field-small">
                     <label class="session-label">Cost</label>
@@ -725,14 +791,95 @@
 
         // Copy previous week functions
         function generatePlan() {
+            // Show loading overlay
+            showGeneratingOverlay();
+
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/settings/generate-plan';
+
+            // Add the constraints field
+            const constraints = document.getElementById('plan_constraints').value;
+            if (constraints) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'plan_constraints';
+                input.value = constraints;
+                form.appendChild(input);
+            }
+
             document.body.appendChild(form);
             form.submit();
         }
 
+        function showGeneratingOverlay() {
+            // Create overlay if it doesn't exist
+            if (!document.getElementById('generatingOverlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'generatingOverlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    color: white;
+                    font-size: 1.2rem;
+                `;
+
+                const spinner = document.createElement('div');
+                spinner.style.cssText = `
+                    border: 4px solid rgba(255, 255, 255, 0.3);
+                    border-top: 4px solid #10b981;
+                    border-radius: 50%;
+                    width: 60px;
+                    height: 60px;
+                    animation: spin 1s linear infinite;
+                    margin-bottom: 1.5rem;
+                `;
+
+                const message = document.createElement('div');
+                message.innerHTML = `
+                    <div style="text-align: center; max-width: 500px; padding: 0 2rem;">
+                        <div style="font-size: 1.5rem; margin-bottom: 1rem;">🤖 Generating Your Training Plan</div>
+                        <div style="font-size: 1rem; opacity: 0.9;">This may take 15-30 seconds...</div>
+                        <div style="font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem;">Please don't close this page</div>
+                    </div>
+                `;
+
+                overlay.appendChild(spinner);
+                overlay.appendChild(message);
+                document.body.appendChild(overlay);
+
+                // Add spinner animation if not already added
+                if (!document.getElementById('spinnerAnimation')) {
+                    const style = document.createElement('style');
+                    style.id = 'spinnerAnimation';
+                    style.textContent = `
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            } else {
+                document.getElementById('generatingOverlay').style.display = 'flex';
+            }
+        }
+
         function copyPreviousWeek(withAI) {
+            // Show loading overlay if using AI
+            if (withAI) {
+                showGeneratingOverlay();
+            }
+
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/settings/copy-previous-week';
