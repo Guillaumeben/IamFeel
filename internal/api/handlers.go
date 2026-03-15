@@ -349,8 +349,8 @@ func (s *Server) HandleLogSession(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Redirect back to dashboard
-    http.Redirect(w, r, "/", http.StatusSeeOther)
+    // Redirect back to dashboard with success toast
+    http.Redirect(w, r, "/?success=Session logged successfully!", http.StatusSeeOther)
 }
 
 // HandleCurrentPlan returns the current week's plan as plain text
@@ -976,9 +976,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     // Update user in database
     if err := s.db.UpdateUser(user); err != nil {
         log.Printf("Failed to update user: %v", err)
-        data := s.NewSettingsData(user, userConfig)
-        data.Error = fmt.Sprintf("Failed to update user: %v", err)
-        s.templates.ExecuteTemplate(w, "settings.html", data)
+        http.Redirect(w, r, fmt.Sprintf("/settings?error=Failed to update user: %v", err), http.StatusSeeOther)
         return
     }
 
@@ -1385,13 +1383,8 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         }
     }
 
-    // Redirect back to settings with success message
-    data := s.NewSettingsData(user, userConfig)
-    data.Success = true
-    if err := s.templates.ExecuteTemplate(w, "settings.html", data); err != nil {
-        http.Error(w, "Failed to render settings", http.StatusInternalServerError)
-        log.Printf("Template error: %v", err)
-    }
+    // Redirect back to settings with success toast
+    http.Redirect(w, r, "/settings?success=Settings saved successfully!", http.StatusSeeOther)
 }
 
 // validatePlanGenerationSettings checks if sufficient configuration exists for plan generation
