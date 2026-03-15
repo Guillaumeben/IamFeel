@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IamFeel - Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=16">
+    <link rel="stylesheet" href="/static/style.css?v=19">
 </head>
 <body class="{{.ThemeClass}}">
     <header>
@@ -28,6 +28,56 @@
                 <span class="datetime-text">{{.CurrentDateTime}}</span>
             </div>
         </div>
+
+        <!-- Quick Stats Summary -->
+        <section class="dashboard-stats-summary">
+            <div class="stats-grid">
+                {{if .WeeklyStats}}
+                <div class="stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-content">
+                        <div class="stat-label">This Week</div>
+                        <div class="stat-value">{{.WeeklyStats.CompletedSessions}}/{{.WeeklyStats.TotalSessions}}</div>
+                        <div class="stat-subtitle">Sessions</div>
+                    </div>
+                </div>
+                {{end}}
+
+                {{if .StreakStats}}
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Current Streak</div>
+                        <div class="stat-value">{{.StreakStats.CurrentStreak}}</div>
+                        <div class="stat-subtitle">Days</div>
+                    </div>
+                </div>
+                {{end}}
+
+                {{if .MonthlyStats}}
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Last 30 Days</div>
+                        <div class="stat-value">{{printf "%.1f" .MonthlyStats.TotalHours}}h</div>
+                        <div class="stat-subtitle">Training Time</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">💪</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Avg Effort</div>
+                        <div class="stat-value">{{printf "%.1f" .MonthlyStats.AvgEffort}}/10</div>
+                        <div class="stat-subtitle">Intensity</div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="/history" class="btn btn-secondary btn-sm">View Full Stats →</a>
+            </div>
+        </section>
 
         {{if .Plan}}
         <section class="plan-section">
@@ -369,5 +419,6 @@
             }
         }
     </script>
+    <script src="/static/workout-render.js"></script>
 </body>
 </html>

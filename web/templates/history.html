@@ -21,10 +21,18 @@
 
     <main class="container">
         <div class="page-header">
-            <h2>Training History</h2>
-            <p>Your recent training sessions</p>
+            <h2>Training History & Stats</h2>
+            <p>Track your sessions and performance metrics</p>
         </div>
 
+        <!-- Tabs -->
+        <div class="settings-tabs">
+            <button type="button" class="tab-button active" onclick="switchTab('sessions', this)">📅 Sessions</button>
+            <button type="button" class="tab-button" onclick="switchTab('stats', this)">📊 Stats</button>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessions-tab" class="tab-content active">
         <section class="filter-section">
             <form action="/history" method="GET" class="filter-form">
                 <div class="filter-header">
@@ -188,7 +196,41 @@
             </div>
             {{end}}
         </section>
+        </div>
+        <!-- End Sessions Tab -->
+
+        <!-- Stats Tab -->
+        <div id="stats-tab" class="tab-content">
+            {{template "stats_content" .}}
+        </div>
+        <!-- End Stats Tab -->
+
     </main>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName, clickedButton) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Remove active class from all buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => button.classList.remove('active'));
+
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Add active class to clicked button
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <footer>
         <div class="container">
@@ -197,3 +239,295 @@
     </footer>
 </body>
 </html>
+
+{{define "stats_content"}}
+<!-- Quick Stats Cards -->
+<section class="stats-grid">
+    {{if .WeeklyStats}}
+    <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-content">
+            <div class="stat-label">This Week</div>
+            <div class="stat-value">{{.WeeklyStats.CompletedSessions}}/{{.WeeklyStats.TotalSessions}}</div>
+            <div class="stat-subtitle">Sessions Completed</div>
+        </div>
+    </div>
+    {{end}}
+
+    {{if .MonthlyStats}}
+    <div class="stat-card">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-content">
+            <div class="stat-label">Last 30 Days</div>
+            <div class="stat-value">{{printf "%.1f" .MonthlyStats.TotalHours}}h</div>
+            <div class="stat-subtitle">Training Time</div>
+        </div>
+    </div>
+    {{end}}
+
+    {{if .StreakStats}}
+    <div class="stat-card">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-content">
+            <div class="stat-label">Current Streak</div>
+            <div class="stat-value">{{.StreakStats.CurrentStreak}}</div>
+            <div class="stat-subtitle">Days Training</div>
+        </div>
+    </div>
+    {{end}}
+
+    {{if .MonthlyStats}}
+    <div class="stat-card">
+        <div class="stat-icon">💪</div>
+        <div class="stat-content">
+            <div class="stat-label">Average Effort</div>
+            <div class="stat-value">{{printf "%.1f" .MonthlyStats.AvgEffort}}/10</div>
+            <div class="stat-subtitle">Perceived Intensity</div>
+        </div>
+    </div>
+    {{end}}
+</section>
+
+<!-- Weekly & Monthly Overview -->
+<section class="stats-overview">
+    <div class="overview-card">
+        <h3>📊 This Week</h3>
+        {{if .WeeklyStats}}
+        <div class="overview-grid">
+            <div class="overview-item">
+                <span class="overview-label">Completed</span>
+                <span class="overview-value">{{.WeeklyStats.CompletedSessions}}</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Skipped</span>
+                <span class="overview-value">{{.WeeklyStats.SkippedSessions}}</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Total Time</span>
+                <span class="overview-value">{{.WeeklyStats.TotalMinutes}} min</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Completion Rate</span>
+                <span class="overview-value">{{printf "%.0f" .WeeklyStats.CompletionRate}}%</span>
+            </div>
+        </div>
+        {{else}}
+        <p class="empty-message">No data for this week yet</p>
+        {{end}}
+    </div>
+
+    <div class="overview-card">
+        <h3>📈 Last 30 Days</h3>
+        {{if .MonthlyStats}}
+        <div class="overview-grid">
+            <div class="overview-item">
+                <span class="overview-label">Completed</span>
+                <span class="overview-value">{{.MonthlyStats.CompletedSessions}}</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Skipped</span>
+                <span class="overview-value">{{.MonthlyStats.SkippedSessions}}</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Total Time</span>
+                <span class="overview-value">{{printf "%.1f" .MonthlyStats.TotalHours}} hrs</span>
+            </div>
+            <div class="overview-item">
+                <span class="overview-label">Completion Rate</span>
+                <span class="overview-value">{{printf "%.0f" .MonthlyStats.CompletionRate}}%</span>
+            </div>
+        </div>
+        {{else}}
+        <p class="empty-message">No data for the last 30 days</p>
+        {{end}}
+    </div>
+</section>
+
+<!-- Charts -->
+<section class="charts-section">
+    <div class="chart-card">
+        <h3>📉 Training Volume (Last 30 Days)</h3>
+        <div class="chart-container">
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <h3>💪 Average Effort (Last 30 Days)</h3>
+        <div class="chart-container">
+            <canvas id="effortChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- Activity Breakdown -->
+{{if .ActivityStats}}
+<section class="activity-breakdown">
+    <h3>🎯 Activity Breakdown (Last 30 Days)</h3>
+    <div class="activity-list">
+        {{range .ActivityStats}}
+        <div class="activity-stat-card">
+            <div class="activity-stat-header">
+                <h4>{{.ActivityName}}</h4>
+                {{if .LastSession}}
+                <span class="last-session">Last: {{.LastSession.Format "Jan 2"}}</span>
+                {{end}}
+            </div>
+            <div class="activity-stat-grid">
+                <div class="activity-stat-item">
+                    <span class="label">Sessions</span>
+                    <span class="value">{{.Sessions}}</span>
+                </div>
+                <div class="activity-stat-item">
+                    <span class="label">Time</span>
+                    <span class="value">{{printf "%.1f" .TotalHours}}h</span>
+                </div>
+                <div class="activity-stat-item">
+                    <span class="label">Avg Effort</span>
+                    <span class="value">{{printf "%.1f" .AvgEffort}}/10</span>
+                </div>
+            </div>
+            <div class="activity-progress-bar">
+                <div class="progress-fill" style="width: {{.TotalHours}}%"></div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+</section>
+{{end}}
+
+<!-- Streak Info -->
+{{if .StreakStats}}
+<section class="streak-section">
+    <h3>🔥 Training Streaks</h3>
+    <div class="streak-cards">
+        <div class="streak-card">
+            <div class="streak-icon">🔥</div>
+            <div class="streak-content">
+                <div class="streak-value">{{.StreakStats.CurrentStreak}}</div>
+                <div class="streak-label">Current Streak</div>
+                <div class="streak-subtitle">Consecutive days training</div>
+            </div>
+        </div>
+        <div class="streak-card">
+            <div class="streak-icon">🏆</div>
+            <div class="streak-content">
+                <div class="streak-value">{{.StreakStats.LongestStreak}}</div>
+                <div class="streak-label">Longest Streak</div>
+                <div class="streak-subtitle">Your personal best</div>
+            </div>
+        </div>
+        {{if .StreakStats.LastTraining}}
+        <div class="streak-card">
+            <div class="streak-icon">📅</div>
+            <div class="streak-content">
+                <div class="streak-value">{{.StreakStats.LastTraining.Format "Jan 2"}}</div>
+                <div class="streak-label">Last Training</div>
+                <div class="streak-subtitle">Most recent session</div>
+            </div>
+        </div>
+        {{end}}
+    </div>
+</section>
+{{end}}
+
+<script>
+    // Prepare data for charts
+    const volumeData = {
+        labels: [
+            {{range $index, $point := .VolumeData}}
+            {{if $index}},{{end}}'{{$point.Date.Format "Jan 2"}}'
+            {{end}}
+        ],
+        datasets: [{
+            label: 'Training Minutes',
+            data: [
+                {{range $index, $point := .VolumeData}}
+                {{if $index}},{{end}}{{$point.Minutes}}
+                {{end}}
+            ],
+            borderColor: 'rgb(239, 68, 68)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            tension: 0.3,
+            fill: true
+        }]
+    };
+
+    const effortData = {
+        labels: [
+            {{range $index, $point := .EffortData}}
+            {{if $index}},{{end}}'{{$point.Date.Format "Jan 2"}}'
+            {{end}}
+        ],
+        datasets: [{
+            label: 'Average Effort',
+            data: [
+                {{range $index, $point := .EffortData}}
+                {{if $index}},{{end}}{{printf "%.1f" $point.AvgEffort}}
+                {{end}}
+            ],
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.3,
+            fill: true
+        }]
+    };
+
+    // Create volume chart
+    const volumeCtx = document.getElementById('volumeChart');
+    if (volumeCtx) {
+        new Chart(volumeCtx, {
+            type: 'line',
+            data: volumeData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' min';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Create effort chart
+    const effortCtx = document.getElementById('effortChart');
+    if (effortCtx) {
+        new Chart(effortCtx, {
+            type: 'line',
+            data: effortData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '/10';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{{end}}

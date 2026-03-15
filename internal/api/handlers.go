@@ -32,6 +32,9 @@ type DashboardData struct {
     AIRecommendations string
     ThemeClass        string
     SportIcon         string
+    WeeklyStats       *db.WeeklyStats
+    StreakStats       *db.StreakStats
+    MonthlyStats      *db.MonthlyStats
 }
 
 // HandleDashboard renders the main dashboard
@@ -79,6 +82,25 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
         supplements = userConfig.Supplements
     }
 
+    // Load stats for dashboard summary
+    weeklyStats, err := s.db.GetWeeklyStats(user.ID, weekStart)
+    if err != nil {
+        log.Printf("Error loading weekly stats: %v", err)
+        weeklyStats = nil
+    }
+
+    streakStats, err := s.db.GetStreakStats(user.ID)
+    if err != nil {
+        log.Printf("Error loading streak stats: %v", err)
+        streakStats = nil
+    }
+
+    monthlyStats, err := s.db.GetMonthlyStats(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading monthly stats: %v", err)
+        monthlyStats = nil
+    }
+
     data := DashboardData{
         UserName:          user.Name,
         CurrentWeek:       fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006")),
@@ -91,6 +113,9 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
         AIRecommendations: "Stay consistent with your training schedule. Focus on recovery between intense sessions.",
         ThemeClass:        s.GetThemeClass(user.ID),
         SportIcon:         s.GetSportIconForUser(user.ID),
+        WeeklyStats:       weeklyStats,
+        StreakStats:       streakStats,
+        MonthlyStats:      monthlyStats,
     }
 
     if err := s.templates.ExecuteTemplate(w, "dashboard.html", data); err != nil {
@@ -104,6 +129,12 @@ type HistoryData struct {
     UserName        string
     Sessions        []*db.TrainingSession
     RestDayNotes    []*db.RestDayNote
+    WeeklyStats     *db.WeeklyStats
+    MonthlyStats    *db.MonthlyStats
+    ActivityStats   []*db.ActivityStats
+    StreakStats     *db.StreakStats
+    VolumeData      []*db.VolumeDataPoint
+    EffortData      []*db.EffortDataPoint
     ThemeClass      string
     SportIcon       string
     FilterStart     string
@@ -188,10 +219,54 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         restDayNotes = []*db.RestDayNote{}
     }
 
+    // Load stats data
+    weekStart := agent.GetWeekStart(time.Now())
+    weeklyStats, err := s.db.GetWeeklyStats(user.ID, weekStart)
+    if err != nil {
+        log.Printf("Error loading weekly stats: %v", err)
+        weeklyStats = nil
+    }
+
+    monthlyStats, err := s.db.GetMonthlyStats(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading monthly stats: %v", err)
+        monthlyStats = nil
+    }
+
+    activityStats, err := s.db.GetActivityStats(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading activity stats: %v", err)
+        activityStats = []*db.ActivityStats{}
+    }
+
+    streakStats, err := s.db.GetStreakStats(user.ID)
+    if err != nil {
+        log.Printf("Error loading streak stats: %v", err)
+        streakStats = nil
+    }
+
+    volumeData, err := s.db.GetVolumeDataPoints(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading volume data: %v", err)
+        volumeData = []*db.VolumeDataPoint{}
+    }
+
+    effortData, err := s.db.GetEffortDataPoints(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading effort data: %v", err)
+        effortData = []*db.EffortDataPoint{}
+    }
+
     data := HistoryData{
         UserName:        user.Name,
         Sessions:        sessions,
         RestDayNotes:    restDayNotes,
+        WeeklyStats:     weeklyStats,
+        MonthlyStats:    monthlyStats,
+        ActivityStats:   activityStats,
+        StreakStats:     streakStats,
+        VolumeData:      volumeData,
+        EffortData:      effortData,
         ThemeClass:      s.GetThemeClass(user.ID),
         SportIcon:       s.GetSportIconForUser(user.ID),
         FilterStart:     startDate,
@@ -1623,4 +1698,89 @@ func (s *Server) HandleCopyPreviousWeek(w http.ResponseWriter, r *http.Request) 
 
     log.Printf("Successfully copied plan from previous week for user: %s (ID: %d)", user.Name, user.ID)
     http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// StatsData holds data for the stats template
+type StatsData struct {
+    User             *db.User
+    WeeklyStats      *db.WeeklyStats
+    MonthlyStats     *db.MonthlyStats
+    ActivityStats    []*db.ActivityStats
+    StreakStats      *db.StreakStats
+    VolumeData       []*db.VolumeDataPoint
+    EffortData       []*db.EffortDataPoint
+    ThemeClass       string
+    SportIcon        string
+}
+
+// HandleStats displays the stats page
+func (s *Server) HandleStats(w http.ResponseWriter, r *http.Request) {
+    user, err := GetCurrentUser(r)
+    if err != nil {
+        http.Error(w, "Failed to load user", http.StatusInternalServerError)
+        log.Printf("Error loading user: %v", err)
+        return
+    }
+
+    // Get week start for current week
+    weekStart := agent.GetWeekStart(time.Now())
+
+    // Get weekly stats
+    weeklyStats, err := s.db.GetWeeklyStats(user.ID, weekStart)
+    if err != nil {
+        log.Printf("Error loading weekly stats: %v", err)
+        weeklyStats = nil
+    }
+
+    // Get monthly stats (last 30 days)
+    monthlyStats, err := s.db.GetMonthlyStats(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading monthly stats: %v", err)
+        monthlyStats = nil
+    }
+
+    // Get activity breakdown (last 30 days)
+    activityStats, err := s.db.GetActivityStats(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading activity stats: %v", err)
+        activityStats = []*db.ActivityStats{}
+    }
+
+    // Get streak stats
+    streakStats, err := s.db.GetStreakStats(user.ID)
+    if err != nil {
+        log.Printf("Error loading streak stats: %v", err)
+        streakStats = nil
+    }
+
+    // Get volume data for chart (last 30 days)
+    volumeData, err := s.db.GetVolumeDataPoints(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading volume data: %v", err)
+        volumeData = []*db.VolumeDataPoint{}
+    }
+
+    // Get effort data for chart (last 30 days)
+    effortData, err := s.db.GetEffortDataPoints(user.ID, 30)
+    if err != nil {
+        log.Printf("Error loading effort data: %v", err)
+        effortData = []*db.EffortDataPoint{}
+    }
+
+    data := StatsData{
+        User:          user,
+        WeeklyStats:   weeklyStats,
+        MonthlyStats:  monthlyStats,
+        ActivityStats: activityStats,
+        StreakStats:   streakStats,
+        VolumeData:    volumeData,
+        EffortData:    effortData,
+        ThemeClass:    s.GetThemeClass(user.ID),
+        SportIcon:     s.GetSportIconForUser(user.ID),
+    }
+
+    if err := s.templates.ExecuteTemplate(w, "stats.html", data); err != nil {
+        http.Error(w, "Failed to render stats", http.StatusInternalServerError)
+        log.Printf("Template error: %v", err)
+    }
 }

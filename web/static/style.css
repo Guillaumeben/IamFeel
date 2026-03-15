@@ -187,8 +187,13 @@ main {
 
 /* Welcome Section */
 .welcome {
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
     position: relative;
+}
+
+/* Dashboard Stats Summary */
+.dashboard-stats-summary {
+    margin-bottom: 4rem;
 }
 
 .welcome h2 {
@@ -770,6 +775,202 @@ footer p {
     white-space: pre-wrap;
     color: var(--text-secondary);
     border: 1px solid var(--border);
+}
+
+/* Workout Rendering Styles */
+.workout-rendered {
+    white-space: normal;
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.workout-focus {
+    background: var(--bg-elevated);
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--accent);
+    margin-bottom: 1.25rem;
+}
+
+.workout-focus-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.workout-focus-text {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.workout-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.workout-details-toggle {
+    margin-top: 1rem;
+}
+
+.btn-toggle-details {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.btn-toggle-details:hover {
+    background: var(--bg);
+    border-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.workout-details-container {
+    margin-top: 1rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.workout-details-simple {
+    background: var(--bg-elevated);
+    padding: 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+}
+
+.workout-line {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.workout-spacer {
+    height: 0.75rem;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.workout-section {
+    background: var(--bg-elevated);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.workout-section-header {
+    background: var(--bg);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.workout-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.workout-section-timing {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    background: var(--bg-elevated);
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+}
+
+.workout-section-content {
+    padding: 1.25rem;
+}
+
+.workout-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.workout-block:last-child {
+    margin-bottom: 0;
+}
+
+.workout-block-header {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.block-description {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.workout-exercise {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.exercise-bullet {
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.exercise-text {
+    flex: 1;
+}
+
+.exercise-text strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.workout-text {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
 
 .planned-actions {
@@ -1471,4 +1672,291 @@ footer p {
 .history-actions .btn-sm {
     font-size: 0.875rem;
     padding: 0.5rem 1rem;
+}
+
+/* ======================
+   Stats Page Styles
+   ====================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.stat-subtitle {
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.overview-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.overview-card h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.overview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.overview-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.overview-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem;
+    font-style: italic;
+}
+
+.charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.chart-card h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.activity-breakdown {
+    margin-bottom: 2rem;
+}
+
+.activity-breakdown h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.activity-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.activity-stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: transform 0.2s;
+}
+
+.activity-stat-card:hover {
+    transform: translateX(4px);
+}
+
+.activity-stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.activity-stat-header h4 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.last-session {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.activity-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.activity-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.activity-stat-item .label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.activity-stat-item .value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.activity-progress-bar {
+    height: 4px;
+    background: var(--bg-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+.streak-section {
+    margin-bottom: 2rem;
+}
+
+.streak-section h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.streak-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.streak-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s;
+}
+
+.streak-card:hover {
+    transform: scale(1.02);
+}
+
+.streak-icon {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.streak-content {
+    flex: 1;
+}
+
+.streak-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.streak-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.streak-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+
+    .overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-stat-grid {
+        grid-template-columns: 1fr;
+    }
 }

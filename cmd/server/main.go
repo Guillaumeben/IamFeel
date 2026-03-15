@@ -75,6 +75,12 @@ func main() {
     r.Get("/calendar/export", server.HandleCalendarExport)
     r.Get("/calendar/export/session", server.HandleSessionCalendarExport)
 
+    // Activity management routes
+    r.Get("/api/activities", server.HandleGetActivities)
+    r.Post("/api/activities", server.HandleAddActivity)
+    r.Put("/api/activities", server.HandleUpdateActivity)
+    r.Delete("/api/activities", server.HandleDeleteActivity)
+
     // Get port from environment or use default
     port := os.Getenv("PORT")
     if port == "" {
