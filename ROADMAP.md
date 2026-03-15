@@ -72,8 +72,8 @@
 ### Progress Visualization
 - [x] Weekly completion progress bars
 - [x] Goal progress trackers with visual indicators
-- [ ] Trend arrows (↑↓) with percentage changes
-- [ ] Comparison views (this week vs last week)
+- [x] Trend arrows (↑↓) with percentage changes
+- [x] Comparison views (this week vs last week)
 - [ ] Heat maps for training frequency
 - [ ] Calendar view showing training days
 - [ ] Milestone celebrations

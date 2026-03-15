@@ -35,6 +35,7 @@ type DashboardData struct {
     WeeklyStats       *db.WeeklyStats
     StreakStats       *db.StreakStats
     MonthlyStats      *db.MonthlyStats
+    WeekComparison    *db.WeekComparison
 }
 
 // HandleDashboard renders the main dashboard
@@ -101,6 +102,12 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
         monthlyStats = nil
     }
 
+    weekComparison, err := s.db.GetWeekComparison(user.ID, weekStart)
+    if err != nil {
+        log.Printf("Error loading week comparison: %v", err)
+        weekComparison = nil
+    }
+
     data := DashboardData{
         UserName:          user.Name,
         CurrentWeek:       fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006")),
@@ -116,6 +123,7 @@ func (s *Server) HandleDashboard(w http.ResponseWriter, r *http.Request) {
         WeeklyStats:       weeklyStats,
         StreakStats:       streakStats,
         MonthlyStats:      monthlyStats,
+        WeekComparison:    weekComparison,
     }
 
     if err := s.templates.ExecuteTemplate(w, "dashboard.html", data); err != nil {
@@ -135,6 +143,7 @@ type HistoryData struct {
     StreakStats     *db.StreakStats
     VolumeData      []*db.VolumeDataPoint
     EffortData      []*db.EffortDataPoint
+    WeekComparison  *db.WeekComparison
     ThemeClass      string
     SportIcon       string
     FilterStart     string
@@ -257,6 +266,12 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         effortData = []*db.EffortDataPoint{}
     }
 
+    weekComparison, err := s.db.GetWeekComparison(user.ID, weekStart)
+    if err != nil {
+        log.Printf("Error loading week comparison: %v", err)
+        weekComparison = nil
+    }
+
     data := HistoryData{
         UserName:        user.Name,
         Sessions:        sessions,
@@ -267,6 +282,7 @@ func (s *Server) HandleHistory(w http.ResponseWriter, r *http.Request) {
         StreakStats:     streakStats,
         VolumeData:      volumeData,
         EffortData:      effortData,
+        WeekComparison:  weekComparison,
         ThemeClass:      s.GetThemeClass(user.ID),
         SportIcon:       s.GetSportIconForUser(user.ID),
         FilterStart:     startDate,

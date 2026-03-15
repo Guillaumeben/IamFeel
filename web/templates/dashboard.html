@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="IamFeel">
     <title>IamFeel - Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=22">
+    <link rel="stylesheet" href="/static/style.css?v=23">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <script src="/static/toast.js"></script>
@@ -71,6 +71,11 @@
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
                             {{printf "%.0f" .WeeklyStats.CompletionRate}}% complete
+                            {{if .WeekComparison}}{{if .WeekComparison.SessionsTrend}}{{if ne .WeekComparison.SessionsTrend.Direction "neutral"}}
+                            <span class="trend trend-{{.WeekComparison.SessionsTrend.Direction}}" style="margin-left: 0.5rem; font-size: 0.7rem;">
+                                {{if eq .WeekComparison.SessionsTrend.Direction "up"}}↑{{else}}↓{{end}} {{printf "%.0f" .WeekComparison.SessionsTrend.Change}}
+                            </span>
+                            {{end}}{{end}}{{end}}
                         </div>
                     </div>
                 </div>
@@ -111,6 +116,67 @@
                 <a href="/history" class="btn btn-secondary btn-sm">View Full Stats →</a>
             </div>
         </section>
+
+        <!-- Week Comparison -->
+        {{if .WeekComparison}}
+        <section class="comparison-section">
+            <h3>📊 This Week vs Last Week</h3>
+            <div class="comparison-card">
+                <div class="comparison-period">
+                    <div class="period-label">Last Week</div>
+                    <div class="period-stats">
+                        <div class="period-stat">
+                            <span class="period-stat-label">Sessions</span>
+                            <span class="period-stat-value">{{.WeekComparison.PreviousWeek.CompletedSessions}}</span>
+                        </div>
+                        <div class="period-stat">
+                            <span class="period-stat-label">Time</span>
+                            <span class="period-stat-value">{{.WeekComparison.PreviousWeek.TotalMinutes}} min</span>
+                        </div>
+                        <div class="period-stat">
+                            <span class="period-stat-label">Effort</span>
+                            <span class="period-stat-value">{{printf "%.1f" .WeekComparison.PreviousWeek.AvgEffort}}/10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-arrow">→</div>
+
+                <div class="comparison-period current">
+                    <div class="period-label">This Week</div>
+                    <div class="period-stats">
+                        <div class="period-stat">
+                            <span class="period-stat-label">Sessions</span>
+                            <span class="period-stat-value">{{.WeekComparison.CurrentWeek.CompletedSessions}}</span>
+                            {{if .WeekComparison.SessionsTrend}}{{if ne .WeekComparison.SessionsTrend.Direction "neutral"}}
+                            <span class="trend trend-{{.WeekComparison.SessionsTrend.Direction}}">
+                                {{if eq .WeekComparison.SessionsTrend.Direction "up"}}↑{{else}}↓{{end}} {{printf "%.0f%%" .WeekComparison.SessionsTrend.Change}}
+                            </span>
+                            {{end}}{{end}}
+                        </div>
+                        <div class="period-stat">
+                            <span class="period-stat-label">Time</span>
+                            <span class="period-stat-value">{{.WeekComparison.CurrentWeek.TotalMinutes}} min</span>
+                            {{if .WeekComparison.TimeTrend}}{{if ne .WeekComparison.TimeTrend.Direction "neutral"}}
+                            <span class="trend trend-{{.WeekComparison.TimeTrend.Direction}}">
+                                {{if eq .WeekComparison.TimeTrend.Direction "up"}}↑{{else}}↓{{end}} {{printf "%.0f min" .WeekComparison.TimeTrend.Change}}
+                            </span>
+                            {{end}}{{end}}
+                        </div>
+                        <div class="period-stat">
+                            <span class="period-stat-label">Effort</span>
+                            <span class="period-stat-value">{{printf "%.1f" .WeekComparison.CurrentWeek.AvgEffort}}/10</span>
+                            {{if .WeekComparison.EffortTrend}}{{if ne .WeekComparison.EffortTrend.Direction "neutral"}}
+                            <span class="trend trend-{{.WeekComparison.EffortTrend.Direction}}">
+                                {{if eq .WeekComparison.EffortTrend.Direction "up"}}↑{{else}}↓{{end}} {{printf "%.1f" .WeekComparison.EffortTrend.Change}}
+                            </span>
+                            {{end}}{{end}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {{end}}
 
         {{if .Plan}}
         <section class="plan-section">

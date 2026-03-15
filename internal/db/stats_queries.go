@@ -61,6 +61,24 @@ type EffortDataPoint struct {
 	AvgEffort float64
 }
 
+// TrendData represents trend information comparing current vs previous period
+type TrendData struct {
+	CurrentValue  float64
+	PreviousValue float64
+	Change        float64
+	PercentChange float64
+	Direction     string // "up", "down", "neutral"
+}
+
+// WeekComparison represents a comparison between two weeks
+type WeekComparison struct {
+	CurrentWeek  *WeeklyStats
+	PreviousWeek *WeeklyStats
+	SessionsTrend *TrendData
+	TimeTrend     *TrendData
+	EffortTrend   *TrendData
+}
+
 // GetWeeklyStats calculates statistics for a specific week
 func (db *DB) GetWeeklyStats(userID int, weekStart time.Time) (*WeeklyStats, error) {
 	weekEnd := weekStart.AddDate(0, 0, 6)
@@ -370,4 +388,67 @@ func (db *DB) GetEffortDataPoints(userID int, days int) ([]*EffortDataPoint, err
 	}
 
 	return dataPoints, nil
+}
+
+// CalculateTrend creates a TrendData object comparing current vs previous values
+func CalculateTrend(current, previous float64) *TrendData {
+	trend := &TrendData{
+		CurrentValue:  current,
+		PreviousValue: previous,
+		Change:        current - previous,
+		Direction:     "neutral",
+	}
+
+	// Calculate percentage change
+	if previous > 0 {
+		trend.PercentChange = ((current - previous) / previous) * 100
+	}
+
+	// Determine direction (with 1% threshold for neutral)
+	if trend.PercentChange > 1 {
+		trend.Direction = "up"
+	} else if trend.PercentChange < -1 {
+		trend.Direction = "down"
+	}
+
+	return trend
+}
+
+// GetWeekComparison compares current week with previous week
+func (db *DB) GetWeekComparison(userID int, currentWeekStart time.Time) (*WeekComparison, error) {
+	// Get current week stats
+	currentWeek, err := db.GetWeeklyStats(userID, currentWeekStart)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current week stats: %w", err)
+	}
+
+	// Get previous week stats
+	previousWeekStart := currentWeekStart.AddDate(0, 0, -7)
+	previousWeek, err := db.GetWeeklyStats(userID, previousWeekStart)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get previous week stats: %w", err)
+	}
+
+	comparison := &WeekComparison{
+		CurrentWeek:  currentWeek,
+		PreviousWeek: previousWeek,
+	}
+
+	// Calculate trends
+	comparison.SessionsTrend = CalculateTrend(
+		float64(currentWeek.CompletedSessions),
+		float64(previousWeek.CompletedSessions),
+	)
+
+	comparison.TimeTrend = CalculateTrend(
+		float64(currentWeek.TotalMinutes),
+		float64(previousWeek.TotalMinutes),
+	)
+
+	comparison.EffortTrend = CalculateTrend(
+		currentWeek.AvgEffort,
+		previousWeek.AvgEffort,
+	)
+
+	return comparison, nil
 }
