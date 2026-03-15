@@ -37,11 +37,16 @@ func ParsePlanForSessions(planText string, weekStart time.Time) []PlannedSession
 
 // extractDaySession extracts session info for a specific day
 func extractDaySession(planText string, day string) *PlannedSession {
-	// Find the day section
-	dayMarker := day + ":"
+	// Find the day section (try both **Day:** and Day: formats)
+	dayMarker := "**" + day + ":**"
 	startIdx := strings.Index(planText, dayMarker)
 	if startIdx == -1 {
-		return nil
+		// Try without bold markdown
+		dayMarker = day + ":"
+		startIdx = strings.Index(planText, dayMarker)
+		if startIdx == -1 {
+			return nil
+		}
 	}
 
 	// Find the end of this day's section (next day or end of plan)
@@ -51,7 +56,11 @@ func extractDaySession(planText string, day string) *PlannedSession {
 		if nextDay == day {
 			continue
 		}
-		idx := strings.Index(planText[startIdx+len(dayMarker):], nextDay+":")
+		// Try both bold and non-bold formats
+		idx := strings.Index(planText[startIdx+len(dayMarker):], "**"+nextDay+":**")
+		if idx == -1 {
+			idx = strings.Index(planText[startIdx+len(dayMarker):], nextDay+":")
+		}
 		if idx != -1 {
 			actualIdx := startIdx + len(dayMarker) + idx
 			if actualIdx < endIdx {
@@ -83,27 +92,37 @@ func extractDaySession(planText string, day string) *PlannedSession {
 		session.DurationMinutes = duration
 	}
 
-	// Extract focus and details as notes
-	focusRegex := regexp.MustCompile(`Focus:\s*(.+)`)
+	// Extract focus for quick display (single line only)
+	focusRegex := regexp.MustCompile(`Focus:\s*([^\n]+)`)
 	var focus string
+	var focusIdx int = -1
 	if matches := focusRegex.FindStringSubmatch(daySection); len(matches) > 1 {
 		focus = strings.TrimSpace(matches[1])
+		focusIdx = strings.Index(daySection, "Focus:")
 	}
 
-	detailsRegex := regexp.MustCompile(`(?s)Details:\s*(.*?)(?:\s*Why:|$)`)
-	var details string
-	if matches := detailsRegex.FindStringSubmatch(daySection); len(matches) > 1 {
-		details = strings.TrimSpace(matches[1])
+	// SIMPLIFIED APPROACH: Capture everything after "Focus:" line
+	// This includes Details:, Why:, and everything else
+	// The JavaScript renderer will extract what it needs
+	var remainingContent string
+	if focusIdx != -1 {
+		// Find the end of the Focus line
+		focusLineEnd := strings.Index(daySection[focusIdx:], "\n")
+		if focusLineEnd != -1 {
+			contentStart := focusIdx + focusLineEnd + 1
+			remainingContent = strings.TrimSpace(daySection[contentStart:])
+		}
 	}
 
+	// Build notes: just Focus line + everything after it
 	if focus != "" {
 		session.Notes = "Focus: " + focus
 	}
-	if details != "" {
+	if remainingContent != "" {
 		if session.Notes != "" {
 			session.Notes += "\n\n"
 		}
-		session.Notes += "Details: " + details
+		session.Notes += remainingContent
 	}
 
 	// Only return if we found at least a session type

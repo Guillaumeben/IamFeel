@@ -75,6 +75,26 @@ type errorDetail struct {
     Message string `json:"message"`
 }
 
+// formatAPIError creates user-friendly error messages for API failures
+func formatAPIError(statusCode int, rawMessage string) error {
+    switch statusCode {
+    case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+        return fmt.Errorf("the Anthropic API is temporarily unavailable (status %d). This is usually a brief service interruption. Please try again in a few moments", statusCode)
+    case http.StatusTooManyRequests:
+        return fmt.Errorf("rate limit reached (status %d). Please wait a moment and try again", statusCode)
+    case http.StatusUnauthorized:
+        return fmt.Errorf("API authentication failed (status %d). Please check your ANTHROPIC_API_KEY environment variable", statusCode)
+    case http.StatusForbidden:
+        return fmt.Errorf("API access forbidden (status %d). Your API key may not have permission for this operation", statusCode)
+    case http.StatusBadRequest:
+        return fmt.Errorf("invalid request to API (status %d): %s", statusCode, rawMessage)
+    case http.StatusInternalServerError:
+        return fmt.Errorf("the Anthropic API encountered an internal error (status %d). Please try again later", statusCode)
+    default:
+        return fmt.Errorf("API request failed (status %d): %s", statusCode, rawMessage)
+    }
+}
+
 // GenerateCompletion sends a message to Claude and returns the response
 func (c *Client) GenerateCompletion(ctx context.Context, systemPrompt string, userPrompt string) (string, error) {
     reqBody := messageRequest{
@@ -118,9 +138,10 @@ func (c *Client) GenerateCompletion(ctx context.Context, systemPrompt string, us
     if resp.StatusCode != http.StatusOK {
         var errResp errorResponse
         if err := json.Unmarshal(body, &errResp); err != nil {
-            return "", fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+            // Handle non-JSON error responses (like 502 Bad Gateway from Cloudflare)
+            return "", formatAPIError(resp.StatusCode, string(body))
         }
-        return "", fmt.Errorf("API error: %s - %s", errResp.Error.Type, errResp.Error.Message)
+        return "", formatAPIError(resp.StatusCode, fmt.Sprintf("%s - %s", errResp.Error.Type, errResp.Error.Message))
     }
 
     var msgResp messageResponse

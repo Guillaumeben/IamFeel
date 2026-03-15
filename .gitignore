@@ -26,6 +26,7 @@ user_config.yaml
 *.key
 *.pem
 certs/
+start_server.sh
 
 # API keys (use environment variables instead)
 

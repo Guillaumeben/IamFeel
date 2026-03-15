@@ -62,8 +62,9 @@
         <!-- Settings Tabs -->
         <div class="settings-tabs">
             <button type="button" class="tab-button active" onclick="switchTab('profile', this)">👤 Profile</button>
-            <button type="button" class="tab-button" onclick="switchTab('equipment', this)">🏋️ Equipment & Gyms</button>
-            <button type="button" class="tab-button" onclick="switchTab('training', this)">📋 Training Setup</button>
+            <button type="button" class="tab-button" onclick="switchTab('activities', this)">🏃 Activities & Goals</button>
+            <button type="button" class="tab-button" onclick="switchTab('schedule', this)">📅 Schedule</button>
+            <button type="button" class="tab-button" onclick="switchTab('equipment', this)">🏋️ Equipment</button>
             <button type="button" class="tab-button" onclick="switchTab('coach', this)">🤖 AI Coach</button>
         </div>
 
@@ -108,7 +109,10 @@
                         </select>
                     </div>
                 </section>
+            </div>
 
+            <!-- Activities & Goals Tab -->
+            <div id="activities-tab" class="tab-content">
                 <section class="settings-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <div>
@@ -126,25 +130,34 @@
                             Loading activities...
                         </div>
                     </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3>🎯 Training Goals</h3>
+                    <p class="section-description">Set your short-term, medium-term, and long-term objectives</p>
 
                     <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 2rem;">
-                        <label for="short_term_goals">Short-Term Goals</label>
+                        <label for="short_term_goals">Short-Term Goals (1-3 months)</label>
                         <textarea id="short_term_goals" name="short_term_goals" rows="4" placeholder="Goals for the next 1-3 months (one per line)">{{range .Config.Goals.ShortTerm}}{{.}}
 {{end}}</textarea>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 2rem;">
-                        <label for="medium_term_goals">Medium-Term Goals</label>
+                        <label for="medium_term_goals">Medium-Term Goals (3-12 months)</label>
                         <textarea id="medium_term_goals" name="medium_term_goals" rows="4" placeholder="Goals for 3-12 months (one per line)">{{range .Config.Goals.MediumTerm}}{{.}}
 {{end}}</textarea>
                     </div>
 
                     <div class="form-group">
-                        <label for="long_term_goals">Long-Term Goals</label>
+                        <label for="long_term_goals">Long-Term Goals (1+ years)</label>
                         <textarea id="long_term_goals" name="long_term_goals" rows="4" placeholder="Goals beyond 1 year (one per line)">{{range .Config.Goals.LongTerm}}{{.}}
 {{end}}</textarea>
                     </div>
                 </section>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div id="schedule-tab" class="tab-content">
 
                 <section class="settings-section">
                     <h3>📅 Weekly Availability</h3>
@@ -328,6 +341,36 @@
                         <textarea id="training_notes" name="training_notes" rows="4" placeholder="Any injuries, limitations, or specific focus areas...">{{.Config.Preferences.Notes}}</textarea>
                     </div>
                 </section>
+
+                <section class="settings-section">
+                    <h3>📋 Training Plan Generation</h3>
+                    <p class="section-description">Generate a new weekly training plan based on your current settings</p>
+
+                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="plan_constraints">Special Requests or Constraints (Optional)</label>
+                            <textarea id="plan_constraints" name="plan_constraints" rows="4" placeholder="e.g., 'I have a sore shoulder, avoid overhead movements', 'Focus more on cardio this week', 'I have a competition in 2 weeks'"></textarea>
+                            <small>Add any specific requests, injuries, upcoming events, or constraints for this week's plan. This will be sent to the AI coach.</small>
+                        </div>
+                        <p style="margin-bottom: 1rem; color: #6b7280;">Click the button below to generate a personalized weekly training plan. Make sure you've saved your settings first.</p>
+                        <button type="button" class="btn" style="background: #10b981; color: white;" onclick="generatePlan()">
+                            Generate Weekly Plan
+                        </button>
+                    </div>
+
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">📋 Copy Previous Week's Plan</h4>
+                        <p style="margin-bottom: 1rem; color: #6b7280;">Quickly recreate last week's training schedule. Optionally request AI adjustments.</p>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="button" class="btn btn-secondary" onclick="copyPreviousWeek(false)">
+                                Copy as-is
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="showCopyWithAIModal()">
+                                Copy with AI adjustments
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             <!-- AI Coach Tab -->
@@ -375,40 +418,6 @@
                             <option value="detailed" {{if eq .Config.Coach.ExplanationDetail "detailed"}}selected{{end}}>Detailed - In-depth explanations with rationale</option>
                         </select>
                         <small>How much explanation and context do you want in your training plans?</small>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Training Setup Tab -->
-            <div id="training-tab" class="tab-content">
-
-                <section class="settings-section">
-                    <h3>📋 Training Plan Generation</h3>
-                    <p class="section-description">Generate a new weekly training plan based on your current settings</p>
-
-                    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="plan_constraints">Special Requests or Constraints (Optional)</label>
-                            <textarea id="plan_constraints" name="plan_constraints" rows="4" placeholder="e.g., 'I have a sore shoulder, avoid overhead movements', 'Focus more on cardio this week', 'I have a competition in 2 weeks'"></textarea>
-                            <small>Add any specific requests, injuries, upcoming events, or constraints for this week's plan. This will be sent to the AI coach.</small>
-                        </div>
-                        <p style="margin-bottom: 1rem; color: #6b7280;">Click the button below to generate a personalized weekly training plan. Make sure you've saved your settings first.</p>
-                        <button type="button" class="btn" style="background: #10b981; color: white;" onclick="generatePlan()">
-                            Generate Weekly Plan
-                        </button>
-                    </div>
-
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; color: #1e40af;">📋 Copy Previous Week's Plan</h4>
-                        <p style="margin-bottom: 1rem; color: #6b7280;">Quickly recreate last week's training schedule. Optionally request AI adjustments.</p>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <button type="button" class="btn btn-secondary" onclick="copyPreviousWeek(false)">
-                                Copy as-is
-                            </button>
-                            <button type="button" class="btn btn-primary" onclick="showCopyWithAIModal()">
-                                Copy with AI adjustments
-                            </button>
-                        </div>
                     </div>
                 </section>
             </div>

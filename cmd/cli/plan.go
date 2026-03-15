@@ -92,7 +92,7 @@ func runPlanGeneration() error {
 
         ctx := context.Background()
         var err error
-        planText, err = agent.GenerateWeeklyPlan(ctx, database, userConfig, weekStart)
+        planText, err = agent.GenerateWeeklyPlan(ctx, database, userConfig, weekStart, "")
         if err != nil {
             return fmt.Errorf("failed to generate plan: %w", err)
         }

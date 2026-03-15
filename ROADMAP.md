@@ -35,7 +35,129 @@
 - [ ] Edit templates
 - [ ] Template library by sport
 
+## UI/UX Improvements (High Priority)
+
+### Settings Page Restructuring
+**Priority: URGENT** - Current settings page is 75KB and overwhelming
+- [ ] Break settings into tabbed sections:
+  - Profile tab (name, age, experience)
+  - Activities tab (sports, goals, phases)
+  - Schedule tab (availability, preferences)
+  - Equipment tab (home equipment, gyms/clubs)
+  - Coach tab (AI settings, coaching style)
+- [ ] Add progressive disclosure (collapsible sections)
+- [ ] Visual feedback on unsaved changes
+- [ ] Inline validation
+- [ ] Better help text and tooltips
+- [ ] Save confirmation toasts
+
+### Progressive Web App (PWA)
+- [ ] Add manifest.json for installability
+- [ ] Service worker for offline support
+- [ ] Add to home screen functionality
+- [ ] Offline data sync strategy
+- [ ] App-like navigation (no browser chrome)
+- [ ] Push notification support
+
+### Empty States & Onboarding
+- [ ] Engaging empty states with actionable guidance
+- [ ] First-time user onboarding flow
+  - Welcome screen
+  - Quick profile setup wizard
+  - Sample plan generation
+  - Feature highlights tour
+- [ ] Contextual help throughout app
+- [ ] Progress indicators during onboarding
+
+### Progress Visualization
+- [ ] Weekly completion progress bars
+- [ ] Goal progress trackers with visual indicators
+- [ ] Trend arrows (↑↓) with percentage changes
+- [ ] Comparison views (this week vs last week)
+- [ ] Heat maps for training frequency
+- [ ] Calendar view showing training days
+- [ ] Milestone celebrations
+
+### Mobile Optimization
+- [ ] Responsive breakpoints review
+- [ ] Touch-friendly tap targets (44px minimum)
+- [ ] Hamburger navigation for mobile
+- [ ] Full-screen modals on mobile
+- [ ] Swipe gestures (tabs, history cards)
+- [ ] Mobile form optimization
+- [ ] Bottom navigation bar option
+
+### Notification System
+- [ ] Toast notifications instead of page reloads
+- [ ] Loading states with skeleton screens
+- [ ] Success/error feedback
+- [ ] Workout reminders
+- [ ] Supplement timing notifications
+- [ ] Streak notifications
+- [ ] Non-intrusive notification center
+
+### Accessibility (a11y)
+- [ ] ARIA labels on interactive elements
+- [ ] Keyboard navigation support
+- [ ] Focus management in modals
+- [ ] Color contrast audit (WCAG AA)
+- [ ] Reduced motion preferences
+- [ ] Screen reader testing
+- [ ] Skip to main content link
+
+### Achievement System & Gamification
+- [ ] Streak badges (7-day, 30-day, 100-day)
+- [ ] Milestone achievements (first session, 50 sessions, etc.)
+- [ ] Personal records celebration
+- [ ] Goal completion badges
+- [ ] Achievement showcase on dashboard
+- [ ] Share achievements feature
+- [ ] Level/XP system based on consistency
+
 ## High Impact Features
+
+### Multi-Activity Support (Core Enhancement)
+**Goal:** Support users with multiple sports/activities (triathletes, recreational multi-sport, etc.)
+
+**MUST-HAVE (Foundational):**
+- [ ] Multiple activities per user (not just "primary sport")
+  - [ ] Database schema: activities table with user_id, activity_name, priority, goal_type
+  - [ ] Per-activity goal types: Competition prep, Maintenance, Learning/beginner, Recreation
+  - [ ] Per-activity priority: High/Medium/Low for time balancing
+- [ ] Activity-specific session types
+  - [ ] Define session type taxonomies per activity (e.g., Running: intervals/tempo/long run/recovery)
+  - [ ] Update AI prompts to understand activity-appropriate session types
+  - [ ] Session logging includes activity_id reference
+- [ ] Activity-specific context
+  - [ ] Tag equipment to specific activities
+  - [ ] Tag gym/club sessions to activities
+  - [ ] Venue/facility availability per activity
+
+**SHOULD-HAVE (Significantly Better UX):**
+- [ ] Event/milestone calendar
+  - [ ] Support multiple event types: races, trips, tournaments, competitions
+  - [ ] Event date + activity + importance level
+  - [ ] AI auto-adjusts training phases (taper, peak) based on event proximity
+- [ ] Flexible periodization per activity
+  - [ ] Per-activity training mode: Event prep (periodized), Maintenance, Learning
+  - [ ] Independent phases per activity (Activity A in Build, Activity B in Maintenance)
+- [ ] Activity balance dashboard
+  - [ ] Weekly time/volume distribution across activities
+  - [ ] Target vs actual per activity
+  - [ ] Visual warnings for neglected activities
+
+**NICE-TO-HAVE (Polish):**
+- [ ] Cross-training intelligence
+  - [ ] AI suggests complementary activities (e.g., "Yoga helps golf flexibility + hiking recovery")
+  - [ ] Recognize activities that support multiple goals
+- [ ] Multi-activity sessions
+  - [ ] Support brick workouts (triathlon: bike-to-run transitions)
+  - [ ] Combined sessions (hike + trail run, bike commute to gym)
+  - [ ] Single session with multiple activity components
+- [ ] Seasonal/contextual awareness
+  - [ ] Activity seasonality (ski season, golf season)
+  - [ ] Weather constraints per activity type
+  - [ ] Automatic activity prioritization based on season
 
 ### Analytics Dashboard
 - [ ] Progress charts (sessions completed vs planned)
@@ -119,6 +241,11 @@
 - [ ] API documentation
 - [ ] Rate limiting
 - [ ] Caching layer
+- [ ] Anthropic prompt caching (when static content reaches 1,024+ tokens)
+  - [ ] Restructure prompt building to separate static vs dynamic content
+  - [ ] Implement cache_control breakpoints in system messages
+  - [ ] Add anthropic-beta header for prompt caching
+  - [ ] Expected savings: ~43% cost reduction, improved latency
 - [ ] Database migrations system
 - [ ] CI/CD pipeline
 - [ ] Docker containerization
@@ -126,4 +253,20 @@
 
 ---
 
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-14
+
+## Notes
+
+### Recent Changes (2026-03-14)
+- Updated AI prompts to distinguish between gym/club sessions and custom workouts
+  - Gym/club sessions: Minimal guidance only (attendance + optional focus tip)
+  - Custom workouts: Full detailed breakdown (warm-up, main work, cool-down)
+  - Prevents AI from adding unnecessary details/post-workout routines to instructor-led sessions
+
+### Multi-Activity Support Context
+The current app is optimized for single-sport, progression-focused training. Multi-activity support is a foundational enhancement needed to serve:
+- Multi-sport athletes (triathletes, duathletes, adventure racers)
+- Recreational multi-sport users (hiking + golf, yoga + running, climbing + cycling)
+- Athletes with primary sport + supplementary training (boxing + strength training)
+
+This enhancement requires data model changes and AI prompt restructuring to support N activities with individual goals, priorities, and training modes.

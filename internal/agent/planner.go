@@ -87,7 +87,7 @@ func extractRationale(planText string) string {
     // Simple extraction - look for RATIONALE: section
     // This is basic and could be improved with better parsing
     const rationaleMarker = "RATIONALE:"
-    const nextSection = "\n\nWEEKLY OVERVIEW:"
+    const nextSection = "DAILY BREAKDOWN:"
 
     startIdx := -1
     for i := 0; i < len(planText)-len(rationaleMarker); i++ {
