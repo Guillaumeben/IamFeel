@@ -66,16 +66,18 @@
                         <div class="stat-value">{{.WeeklyStats.CompletedSessions}}/{{.WeeklyStats.TotalSessions}}</div>
                         <div class="stat-subtitle">Sessions</div>
                         <div class="progress-bar-container" style="margin-top: 0.75rem;">
-                            <div class="progress-bar {{if ge .WeeklyStats.CompletionRate 80}}success{{else if ge .WeeklyStats.CompletionRate 50}}warning{{else}}danger{{end}}"
+                            <div class="progress-bar {{if ge .WeeklyStats.CompletionRate 80.0}}success{{else if ge .WeeklyStats.CompletionRate 50.0}}warning{{else}}danger{{end}}"
                                  style="width: {{.WeeklyStats.CompletionRate}}%"></div>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
                             {{printf "%.0f" .WeeklyStats.CompletionRate}}% complete
-                            {{if .WeekComparison}}{{if .WeekComparison.SessionsTrend}}{{if ne .WeekComparison.SessionsTrend.Direction "neutral"}}
+                            {{if and .WeekComparison .WeekComparison.SessionsTrend}}
+                            {{if ne .WeekComparison.SessionsTrend.Direction "neutral"}}
                             <span class="trend trend-{{.WeekComparison.SessionsTrend.Direction}}" style="margin-left: 0.5rem; font-size: 0.7rem;">
                                 {{if eq .WeekComparison.SessionsTrend.Direction "up"}}↑{{else}}↓{{end}} {{printf "%.0f" .WeekComparison.SessionsTrend.Change}}
                             </span>
-                            {{end}}{{end}}{{end}}
+                            {{end}}
+                            {{end}}
                         </div>
                     </div>
                 </div>

@@ -334,7 +334,7 @@
             <strong>{{.WeeklyStats.CompletedSessions}}/{{.WeeklyStats.TotalSessions}} sessions</strong>
         </div>
         <div class="progress-bar-container">
-            <div class="progress-bar {{if ge .WeeklyStats.CompletionRate 80}}success{{else if ge .WeeklyStats.CompletionRate 50}}warning{{else}}danger{{end}}"
+            <div class="progress-bar {{if ge .WeeklyStats.CompletionRate 80.0}}success{{else if ge .WeeklyStats.CompletionRate 50.0}}warning{{else}}danger{{end}}"
                  style="width: {{.WeeklyStats.CompletionRate}}%"></div>
         </div>
         {{else}}
@@ -368,7 +368,7 @@
             <strong>{{.MonthlyStats.CompletedSessions}}/{{.MonthlyStats.TotalSessions}} sessions</strong>
         </div>
         <div class="progress-bar-container">
-            <div class="progress-bar {{if ge .MonthlyStats.CompletionRate 80}}success{{else if ge .MonthlyStats.CompletionRate 50}}warning{{else}}danger{{end}}"
+            <div class="progress-bar {{if ge .MonthlyStats.CompletionRate 80.0}}success{{else if ge .MonthlyStats.CompletionRate 50.0}}warning{{else}}danger{{end}}"
                  style="width: {{.MonthlyStats.CompletionRate}}%"></div>
         </div>
         {{else}}
