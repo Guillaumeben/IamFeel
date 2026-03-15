@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="IamFeel">
     <title>IamFeel - Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=21">
+    <link rel="stylesheet" href="/static/style.css?v=22">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <script src="/static/toast.js"></script>
@@ -65,6 +65,13 @@
                         <div class="stat-label">This Week</div>
                         <div class="stat-value">{{.WeeklyStats.CompletedSessions}}/{{.WeeklyStats.TotalSessions}}</div>
                         <div class="stat-subtitle">Sessions</div>
+                        <div class="progress-bar-container" style="margin-top: 0.75rem;">
+                            <div class="progress-bar {{if ge .WeeklyStats.CompletionRate 80}}success{{else if ge .WeeklyStats.CompletionRate 50}}warning{{else}}danger{{end}}"
+                                 style="width: {{.WeeklyStats.CompletionRate}}%"></div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            {{printf "%.0f" .WeeklyStats.CompletionRate}}% complete
+                        </div>
                     </div>
                 </div>
                 {{end}}

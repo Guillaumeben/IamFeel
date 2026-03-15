@@ -70,8 +70,8 @@
 - [ ] Progress indicators during onboarding
 
 ### Progress Visualization
-- [ ] Weekly completion progress bars
-- [ ] Goal progress trackers with visual indicators
+- [x] Weekly completion progress bars
+- [x] Goal progress trackers with visual indicators
 - [ ] Trend arrows (↑↓) with percentage changes
 - [ ] Comparison views (this week vs last week)
 - [ ] Heat maps for training frequency
