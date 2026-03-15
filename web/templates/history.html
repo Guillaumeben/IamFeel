@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IamFeel - Training History</title>
+    <title>IamFeel - Progress</title>
     <link rel="stylesheet" href="/static/style.css?v=23">
 </head>
 <body class="{{.ThemeClass}}">
@@ -12,7 +12,7 @@
             <h1>{{.SportIcon}} IamFeel</h1>
             <nav>
                 <a href="/">Dashboard</a>
-                <a href="/history" class="active">History</a>
+                <a href="/history" class="active">Progress</a>
                 <a href="/users">Users</a>
                 <a href="/settings">Settings</a>
             </nav>
@@ -21,18 +21,24 @@
 
     <main class="container">
         <div class="page-header">
-            <h2>Training History & Stats</h2>
-            <p>Track your sessions and performance metrics</p>
+            <h2>Your Progress</h2>
+            <p>Track your performance, analyze trends, and celebrate achievements</p>
         </div>
 
         <!-- Tabs -->
         <div class="settings-tabs">
-            <button type="button" class="tab-button active" onclick="switchTab('sessions', this)">📅 Sessions</button>
-            <button type="button" class="tab-button" onclick="switchTab('stats', this)">📊 Stats</button>
+            <button type="button" class="tab-button active" onclick="switchTab('stats', this)">📊 Stats</button>
+            <button type="button" class="tab-button" onclick="switchTab('sessions', this)">📅 Sessions</button>
         </div>
 
+        <!-- Stats Tab -->
+        <div id="stats-tab" class="tab-content active">
+            {{template "stats_content" .}}
+        </div>
+        <!-- End Stats Tab -->
+
         <!-- Sessions Tab -->
-        <div id="sessions-tab" class="tab-content active">
+        <div id="sessions-tab" class="tab-content">
         <section class="filter-section">
             <form action="/history" method="GET" class="filter-form">
                 <div class="filter-header">
@@ -216,12 +222,6 @@
         </section>
         </div>
         <!-- End Sessions Tab -->
-
-        <!-- Stats Tab -->
-        <div id="stats-tab" class="tab-content">
-            {{template "stats_content" .}}
-        </div>
-        <!-- End Stats Tab -->
 
     </main>
 
