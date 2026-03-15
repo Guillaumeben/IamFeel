@@ -14,19 +14,23 @@ type User struct {
     UpdatedAt       time.Time `json:"updated_at"`
 }
 
-// UserSport represents a sport the user practices
+// UserSport represents a sport/activity the user practices
 type UserSport struct {
-    ID               int       `json:"id"`
-    UserID           int       `json:"user_id"`
-    SportName        string    `json:"sport_name"`
-    ConfigPath       string    `json:"config_path"`
-    IsPrimary        bool      `json:"is_primary"`
-    ExperienceYears  int       `json:"experience_years"`
-    CurrentPhase     string    `json:"current_phase"`
-    PhaseStartDate   *time.Time `json:"phase_start_date"`
-    PhaseEndDate     *time.Time `json:"phase_end_date"`
-    CreatedAt        time.Time `json:"created_at"`
-    UpdatedAt        time.Time `json:"updated_at"`
+    ID                    int        `json:"id"`
+    UserID                int        `json:"user_id"`
+    SportName             string     `json:"sport_name"`
+    ConfigPath            string     `json:"config_path"`
+    IsPrimary             bool       `json:"is_primary"` // Deprecated: use Priority instead
+    ExperienceYears       int        `json:"experience_years"`
+    CurrentPhase          string     `json:"current_phase"`
+    PhaseStartDate        *time.Time `json:"phase_start_date"`
+    PhaseEndDate          *time.Time `json:"phase_end_date"`
+    GoalType              string     `json:"goal_type"`               // competition_prep, maintenance, learning, recreation
+    Priority              string     `json:"priority"`                // high, medium, low
+    TargetSessionsPerWeek float64    `json:"target_sessions_per_week"`
+    Notes                 string     `json:"notes"`
+    CreatedAt             time.Time  `json:"created_at"`
+    UpdatedAt             time.Time  `json:"updated_at"`
 }
 
 // TrainingSession represents a logged workout
@@ -106,6 +110,7 @@ type Equipment struct {
     UserID        int       `json:"user_id"`
     Location      string    `json:"location"`
     EquipmentName string    `json:"equipment_name"`
+    SportID       *int      `json:"sport_id"` // Link to specific activity (NULL = available for all)
     CreatedAt     time.Time `json:"created_at"`
 }
 
@@ -123,8 +128,6 @@ type ClubSession struct {
     Time            string    `json:"time"`
     DurationMinutes int       `json:"duration_minutes"`
     SessionType     string    `json:"session_type"`
-    CostType        string    `json:"cost_type"`
-    CostAmount      float64   `json:"cost_amount"`
     Notes           string    `json:"notes"`
     Active          bool      `json:"active"`
     CreatedAt       time.Time `json:"created_at"`
@@ -162,6 +165,7 @@ type Gym struct {
     Type           string    `json:"type"`
     Membership     string    `json:"membership"`
     AvailableDays  string    `json:"available_days"`
+    SportID        *int      `json:"sport_id"`        // Link to specific activity (NULL = available for all)
     SessionsLimit  *int      `json:"sessions_limit"`  // Number of sessions for limited memberships
     LimitPeriod    *string   `json:"limit_period"`    // "weekly" or "monthly"
     CreatedAt      time.Time `json:"created_at"`
@@ -185,13 +189,15 @@ type UserPreferences struct {
     ID                        int       `json:"id"`
     UserID                    int       `json:"user_id"`
     PrimaryGoal               string    `json:"primary_goal"`
-    SessionsPerWeek           int       `json:"sessions_per_week"`
+    SessionsPerWeek           float64   `json:"sessions_per_week"`
     PreferredDuration         int       `json:"preferred_duration"`
     PreferredSessionTimes     string    `json:"preferred_session_times"`
     SessionDurationPreference string    `json:"session_duration_preference"`
     IntensityPreference       string    `json:"intensity_preference"`
     RecoveryPriority          string    `json:"recovery_priority"`
     PlanFrequency             string    `json:"plan_frequency"`
+    AllowShortSessions        bool      `json:"allow_short_sessions"`
+    MaxSessionsPerDay         int       `json:"max_sessions_per_day"`
     Notes                     string    `json:"notes"`
     CreatedAt                 time.Time `json:"created_at"`
     UpdatedAt                 time.Time `json:"updated_at"`

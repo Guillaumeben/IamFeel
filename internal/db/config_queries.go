@@ -67,7 +67,7 @@ func (db *DB) CreateGoalSimple(userID int, goalType, description string) error {
 // ==================== Sport Functions ====================
 
 // UpdatePrimarySport sets a sport as the primary sport for a user
-func (db *DB) UpdatePrimarySport(userID int, sportName string) error {
+func (db *DB) UpdatePrimarySport(userID int, sportName string, experienceYears int) error {
 	// First, unset all sports as non-primary
 	_, err := db.conn.Exec("UPDATE user_sports SET is_primary = 0 WHERE user_id = ?", userID)
 	if err != nil {
@@ -83,13 +83,13 @@ func (db *DB) UpdatePrimarySport(userID int, sportName string) error {
 
 	if count == 0 {
 		// Sport doesn't exist, create it
-		_, err = db.conn.Exec("INSERT INTO user_sports (user_id, sport_name, is_primary, created_at, updated_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", userID, sportName)
+		_, err = db.conn.Exec("INSERT INTO user_sports (user_id, sport_name, is_primary, experience_years, created_at, updated_at) VALUES (?, ?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", userID, sportName, experienceYears)
 		if err != nil {
 			return fmt.Errorf("failed to create primary sport: %w", err)
 		}
 	} else {
-		// Sport exists, set it as primary
-		_, err = db.conn.Exec("UPDATE user_sports SET is_primary = 1, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND sport_name = ?", userID, sportName)
+		// Sport exists, set it as primary and update experience years
+		_, err = db.conn.Exec("UPDATE user_sports SET is_primary = 1, experience_years = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND sport_name = ?", experienceYears, userID, sportName)
 		if err != nil {
 			return fmt.Errorf("failed to update primary sport: %w", err)
 		}
@@ -102,7 +102,7 @@ func (db *DB) UpdatePrimarySport(userID int, sportName string) error {
 
 // GetUserEquipment retrieves all equipment for a user
 func (db *DB) GetUserEquipment(userID int) ([]*Equipment, error) {
-	query := `SELECT id, user_id, location, equipment_name, created_at
+	query := `SELECT id, user_id, location, equipment_name, sport_id, created_at
               FROM equipment WHERE user_id = ? ORDER BY location, equipment_name`
 
 	rows, err := db.conn.Query(query, userID)
@@ -114,7 +114,7 @@ func (db *DB) GetUserEquipment(userID int) ([]*Equipment, error) {
 	var equipment []*Equipment
 	for rows.Next() {
 		var e Equipment
-		if err := rows.Scan(&e.ID, &e.UserID, &e.Location, &e.EquipmentName, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Location, &e.EquipmentName, &e.SportID, &e.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan equipment: %w", err)
 		}
 		equipment = append(equipment, &e)
@@ -125,12 +125,25 @@ func (db *DB) GetUserEquipment(userID int) ([]*Equipment, error) {
 
 // AddEquipment adds a piece of equipment for a user
 func (db *DB) AddEquipment(userID int, location, equipmentName string) error {
-	query := `INSERT INTO equipment (user_id, location, equipment_name, created_at)
-              VALUES (?, ?, ?, CURRENT_TIMESTAMP)`
+	query := `INSERT INTO equipment (user_id, location, equipment_name, sport_id, created_at)
+              VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)`
 
 	_, err := db.conn.Exec(query, userID, location, equipmentName)
 	if err != nil {
 		return fmt.Errorf("failed to add equipment: %w", err)
+	}
+
+	return nil
+}
+
+// AddEquipmentWithSport adds equipment tagged to a specific activity
+func (db *DB) AddEquipmentWithSport(userID int, location, equipmentName string, sportID *int) error {
+	query := `INSERT INTO equipment (user_id, location, equipment_name, sport_id, created_at)
+              VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`
+
+	_, err := db.conn.Exec(query, userID, location, equipmentName, sportID)
+	if err != nil {
+		return fmt.Errorf("failed to add equipment with sport: %w", err)
 	}
 
 	return nil
@@ -164,7 +177,7 @@ func (db *DB) ClearUserEquipment(userID int) error {
 
 // GetUserGyms retrieves all gyms for a user
 func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
-	query := `SELECT id, user_id, name, type, membership, available_days, sessions_limit, limit_period, created_at, updated_at
+	query := `SELECT id, user_id, name, type, membership, available_days, sport_id, sessions_limit, limit_period, created_at, updated_at
               FROM gyms WHERE user_id = ? ORDER BY name`
 
 	rows, err := db.conn.Query(query, userID)
@@ -177,7 +190,7 @@ func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
 	for rows.Next() {
 		var g Gym
 		if err := rows.Scan(&g.ID, &g.UserID, &g.Name, &g.Type, &g.Membership,
-			&g.AvailableDays, &g.SessionsLimit, &g.LimitPeriod, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			&g.AvailableDays, &g.SportID, &g.SessionsLimit, &g.LimitPeriod, &g.CreatedAt, &g.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan gym: %w", err)
 		}
 		gyms = append(gyms, &g)
@@ -188,10 +201,10 @@ func (db *DB) GetUserGyms(userID int) ([]*Gym, error) {
 
 // CreateGym adds a new gym membership
 func (db *DB) CreateGym(gym *Gym) (int64, error) {
-	query := `INSERT INTO gyms (user_id, name, type, membership, available_days, sessions_limit, limit_period, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	query := `INSERT INTO gyms (user_id, name, type, membership, available_days, sport_id, sessions_limit, limit_period, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 
-	result, err := db.conn.Exec(query, gym.UserID, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SessionsLimit, gym.LimitPeriod)
+	result, err := db.conn.Exec(query, gym.UserID, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SportID, gym.SessionsLimit, gym.LimitPeriod)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create gym: %w", err)
 	}
@@ -201,10 +214,10 @@ func (db *DB) CreateGym(gym *Gym) (int64, error) {
 
 // UpdateGym updates gym information
 func (db *DB) UpdateGym(gym *Gym) error {
-	query := `UPDATE gyms SET name = ?, type = ?, membership = ?, available_days = ?, sessions_limit = ?, limit_period = ?,
+	query := `UPDATE gyms SET name = ?, type = ?, membership = ?, available_days = ?, sport_id = ?, sessions_limit = ?, limit_period = ?,
               updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 
-	_, err := db.conn.Exec(query, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SessionsLimit, gym.LimitPeriod, gym.ID)
+	_, err := db.conn.Exec(query, gym.Name, gym.Type, gym.Membership, gym.AvailableDays, gym.SportID, gym.SessionsLimit, gym.LimitPeriod, gym.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update gym: %w", err)
 	}
@@ -238,7 +251,7 @@ func (db *DB) ClearUserGyms(userID int) error {
 // GetGymSessions retrieves all club sessions for a gym
 func (db *DB) GetGymSessions(gymID int) ([]*ClubSession, error) {
 	query := `SELECT id, user_id, gym_id, sport_id, session_name, description, occurrences,
-              cost, day_of_week, time, duration_minutes, session_type, cost_type, cost_amount,
+              cost, day_of_week, time, duration_minutes, session_type,
               notes, active, created_at, updated_at
               FROM club_sessions WHERE gym_id = ? AND active = 1 ORDER BY day_of_week, time`
 
@@ -253,7 +266,7 @@ func (db *DB) GetGymSessions(gymID int) ([]*ClubSession, error) {
 		var s ClubSession
 		if err := rows.Scan(&s.ID, &s.UserID, &s.GymID, &s.SportID, &s.SessionName, &s.Description,
 			&s.Occurrences, &s.Cost, &s.DayOfWeek, &s.Time, &s.DurationMinutes, &s.SessionType,
-			&s.CostType, &s.CostAmount, &s.Notes, &s.Active, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			&s.Notes, &s.Active, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan club session: %w", err)
 		}
 		sessions = append(sessions, &s)
@@ -265,14 +278,14 @@ func (db *DB) GetGymSessions(gymID int) ([]*ClubSession, error) {
 // CreateClubSession adds a new club session
 func (db *DB) CreateClubSession(session *ClubSession) (int64, error) {
 	query := `INSERT INTO club_sessions (user_id, gym_id, sport_id, session_name, description,
-              occurrences, cost, day_of_week, time, duration_minutes, session_type, cost_type,
-              cost_amount, notes, active, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+              occurrences, cost, day_of_week, time, duration_minutes, session_type,
+              notes, active, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 
 	result, err := db.conn.Exec(query, session.UserID, session.GymID, session.SportID,
 		session.SessionName, session.Description, session.Occurrences, session.Cost,
 		session.DayOfWeek, session.Time, session.DurationMinutes, session.SessionType,
-		session.CostType, session.CostAmount, session.Notes, session.Active)
+		session.Notes, session.Active)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create club session: %w", err)
 	}
@@ -318,9 +331,13 @@ func (db *DB) GetUserAvailability(userID int) ([]*Availability, error) {
 	var availability []*Availability
 	for rows.Next() {
 		var a Availability
+		var preferredLocation sql.NullString
 		if err := rows.Scan(&a.ID, &a.UserID, &a.DayOfWeek, &a.Morning, &a.Lunch, &a.Evening,
-			&a.PreferredLocation, &a.Notes, &a.CreatedAt, &a.UpdatedAt); err != nil {
+			&preferredLocation, &a.Notes, &a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan availability: %w", err)
+		}
+		if preferredLocation.Valid {
+			a.PreferredLocation = preferredLocation.String
 		}
 		availability = append(availability, &a)
 	}
@@ -411,7 +428,8 @@ func (db *DB) DeleteSupplement(supplementID int) error {
 func (db *DB) GetUserPreferences(userID int) (*UserPreferences, error) {
 	query := `SELECT id, user_id, primary_goal, sessions_per_week, preferred_duration,
               preferred_session_times, session_duration_preference, intensity_preference,
-              recovery_priority, plan_frequency, notes, created_at, updated_at
+              recovery_priority, plan_frequency, allow_short_sessions, max_sessions_per_day,
+              notes, created_at, updated_at
               FROM user_preferences WHERE user_id = ?`
 
 	var prefs UserPreferences
@@ -419,6 +437,7 @@ func (db *DB) GetUserPreferences(userID int) (*UserPreferences, error) {
 		&prefs.ID, &prefs.UserID, &prefs.PrimaryGoal, &prefs.SessionsPerWeek,
 		&prefs.PreferredDuration, &prefs.PreferredSessionTimes, &prefs.SessionDurationPreference,
 		&prefs.IntensityPreference, &prefs.RecoveryPriority, &prefs.PlanFrequency,
+		&prefs.AllowShortSessions, &prefs.MaxSessionsPerDay,
 		&prefs.Notes, &prefs.CreatedAt, &prefs.UpdatedAt,
 	)
 
@@ -436,8 +455,8 @@ func (db *DB) GetUserPreferences(userID int) (*UserPreferences, error) {
 func (db *DB) UpsertUserPreferences(prefs *UserPreferences) error {
 	query := `INSERT INTO user_preferences (user_id, primary_goal, sessions_per_week, preferred_duration,
               preferred_session_times, session_duration_preference, intensity_preference, recovery_priority,
-              plan_frequency, notes, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              plan_frequency, allow_short_sessions, max_sessions_per_day, notes, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
               ON CONFLICT(user_id) DO UPDATE SET
                   primary_goal = excluded.primary_goal,
                   sessions_per_week = excluded.sessions_per_week,
@@ -447,12 +466,15 @@ func (db *DB) UpsertUserPreferences(prefs *UserPreferences) error {
                   intensity_preference = excluded.intensity_preference,
                   recovery_priority = excluded.recovery_priority,
                   plan_frequency = excluded.plan_frequency,
+                  allow_short_sessions = excluded.allow_short_sessions,
+                  max_sessions_per_day = excluded.max_sessions_per_day,
                   notes = excluded.notes,
                   updated_at = CURRENT_TIMESTAMP`
 
 	_, err := db.conn.Exec(query, prefs.UserID, prefs.PrimaryGoal, prefs.SessionsPerWeek,
 		prefs.PreferredDuration, prefs.PreferredSessionTimes, prefs.SessionDurationPreference,
-		prefs.IntensityPreference, prefs.RecoveryPriority, prefs.PlanFrequency, prefs.Notes)
+		prefs.IntensityPreference, prefs.RecoveryPriority, prefs.PlanFrequency,
+		prefs.AllowShortSessions, prefs.MaxSessionsPerDay, prefs.Notes)
 	if err != nil {
 		return fmt.Errorf("failed to upsert user preferences: %w", err)
 	}

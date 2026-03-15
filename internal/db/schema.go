@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sports configuration: tracks which sports user practices
+-- Sports configuration: tracks which sports/activities user practices
 CREATE TABLE IF NOT EXISTS user_sports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS user_sports (
     current_phase TEXT NOT NULL,
     phase_start_date DATE,
     phase_end_date DATE,
+    goal_type TEXT CHECK(goal_type IN ('competition_prep', 'maintenance', 'learning', 'recreation')) DEFAULT 'maintenance',
+    priority TEXT CHECK(priority IN ('high', 'medium', 'low')) DEFAULT 'medium',
+    target_sessions_per_week REAL DEFAULT 0,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -130,8 +134,10 @@ CREATE TABLE IF NOT EXISTS equipment (
     user_id INTEGER NOT NULL,
     location TEXT CHECK(location IN ('home', 'gym', 'club')) NOT NULL,
     equipment_name TEXT NOT NULL,
+    sport_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sport_id) REFERENCES user_sports(id) ON DELETE SET NULL
 );
 
 -- Gyms: gym/club memberships
@@ -142,9 +148,11 @@ CREATE TABLE IF NOT EXISTS gyms (
     type TEXT NOT NULL,
     membership TEXT,
     available_days TEXT,
+    sport_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sport_id) REFERENCES user_sports(id) ON DELETE SET NULL
 );
 
 -- Club sessions: scheduled club/gym sessions
@@ -193,13 +201,15 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
     primary_goal TEXT,
-    sessions_per_week INTEGER,
+    sessions_per_week REAL,
     preferred_duration INTEGER,
     preferred_session_times TEXT,
     session_duration_preference TEXT,
     intensity_preference TEXT,
     recovery_priority TEXT,
     plan_frequency TEXT,
+    allow_short_sessions BOOLEAN DEFAULT 0,
+    max_sessions_per_day INTEGER DEFAULT 1,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -231,7 +241,7 @@ CREATE TABLE IF NOT EXISTS fitness_baseline (
 CREATE TABLE IF NOT EXISTS coach_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
-    model TEXT DEFAULT 'claude-sonnet-4-5',
+    model TEXT DEFAULT 'claude-haiku-4-5',
     temperature REAL DEFAULT 0.7,
     coaching_style TEXT DEFAULT 'balanced',
     explanation_detail TEXT DEFAULT 'moderate',
@@ -316,6 +326,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id, create
 CREATE INDEX IF NOT EXISTS idx_session_templates_user ON session_templates(user_id, sport_name);
 CREATE INDEX IF NOT EXISTS idx_rest_day_notes_user_date ON rest_day_notes(user_id, rest_date DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_date ON ai_usage(user_id, usage_date DESC);
+CREATE INDEX IF NOT EXISTS idx_equipment_sport ON equipment(sport_id);
+CREATE INDEX IF NOT EXISTS idx_user_sports_priority ON user_sports(user_id, priority);
+CREATE INDEX IF NOT EXISTS idx_club_sessions_sport_active ON club_sessions(sport_id, active);
 `
 
 // migrationSQL contains ALTER statements for schema updates

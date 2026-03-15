@@ -698,6 +698,7 @@ func replaceDayInPlan(originalPlan string, dayName string, newDayPlan string) st
 type SettingsData struct {
     User          *db.User
     Config        *config.UserConfig
+    UserActivities []*db.UserSport
     Success       bool
     Error         string
     ThemeClass    string
@@ -714,13 +715,21 @@ func (s *Server) NewSettingsData(user *db.User, userConfig *config.UserConfig) S
         aiUsageCount = 0
     }
 
+    // Load user activities for the activity selector
+    userActivities, err := s.db.GetUserSports(user.ID)
+    if err != nil {
+        log.Printf("Warning: Failed to get user activities: %v", err)
+        userActivities = []*db.UserSport{}
+    }
+
     return SettingsData{
-        User:         user,
-        Config:       userConfig,
-        ThemeClass:   s.GetThemeClass(user.ID),
-        SportIcon:    s.GetSportIconForUser(user.ID),
-        AIUsageCount: aiUsageCount,
-        AIUsageLimit: DailyAICallLimit,
+        User:           user,
+        Config:         userConfig,
+        UserActivities: userActivities,
+        ThemeClass:     s.GetThemeClass(user.ID),
+        SportIcon:      s.GetSportIconForUser(user.ID),
+        AIUsageCount:   aiUsageCount,
+        AIUsageLimit:   DailyAICallLimit,
     }
 }
 
@@ -898,31 +907,31 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Update primary sport
+    // Update primary sport and experience years together
     if sport := r.FormValue("primary_sport"); sport != "" {
+        experienceYears := 0
+        if experienceYearsStr := r.FormValue("sport_experience_years"); experienceYearsStr != "" {
+            if years, err := strconv.Atoi(experienceYearsStr); err == nil {
+                experienceYears = years
+            }
+        }
+
         // Update existing sports or create new one
         found := false
         for i := range userConfig.Sports {
             if userConfig.Sports[i].Primary {
                 userConfig.Sports[i].Name = sport
+                userConfig.Sports[i].ExperienceYears = experienceYears
                 found = true
                 break
             }
         }
         if !found {
-            userConfig.Sports = []config.UserSport{{Name: sport, Primary: true}}
-        }
-    }
-
-    // Update sport experience years
-    if experienceYears := r.FormValue("sport_experience_years"); experienceYears != "" {
-        if years, err := strconv.Atoi(experienceYears); err == nil {
-            for i := range userConfig.Sports {
-                if userConfig.Sports[i].Primary {
-                    userConfig.Sports[i].ExperienceYears = years
-                    break
-                }
-            }
+            userConfig.Sports = []config.UserSport{{
+                Name:            sport,
+                Primary:         true,
+                ExperienceYears: experienceYears,
+            }}
         }
     }
 
@@ -989,8 +998,16 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         userConfig.Preferences.PrimaryGoal = goal
     }
     if sessionsStr := r.FormValue("sessions_per_week"); sessionsStr != "" {
-        if sessions, err := strconv.Atoi(sessionsStr); err == nil {
+        if sessions, err := strconv.ParseFloat(sessionsStr, 64); err == nil {
             userConfig.Preferences.SessionsPerWeek = sessions
+        }
+    }
+    allowShortSessions := r.FormValue("allow_short_sessions") == "on"
+    userConfig.Preferences.AllowShortSessions = allowShortSessions
+
+    if maxSessionsStr := r.FormValue("max_sessions_per_day"); maxSessionsStr != "" {
+        if maxSessions, err := strconv.Atoi(maxSessionsStr); err == nil {
+            userConfig.Preferences.MaxSessionsPerDay = maxSessions
         }
     }
     if durationStr := r.FormValue("session_duration"); durationStr != "" {
@@ -998,9 +1015,8 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
             userConfig.Preferences.PreferredDuration = duration
         }
     }
-    if notes := r.FormValue("training_notes"); notes != "" {
-        userConfig.Preferences.Notes = strings.TrimSpace(notes)
-    }
+    notes := r.FormValue("training_notes")
+    userConfig.Preferences.Notes = strings.TrimSpace(notes)
 
     // Update home equipment
     homeEquipment := []string{}
@@ -1016,6 +1032,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     gymNames := r.Form["gym_name[]"]
     gymTypes := r.Form["gym_type[]"]
     gymMemberships := r.Form["gym_membership[]"]
+    gymSportIDs := r.Form["gym_sport_id[]"]
 
     newGyms := []config.Gym{}
     for i := range gymNames {
@@ -1081,7 +1098,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
     // Save to database instead of YAML
     // 1. Save primary sport
     if len(userConfig.Sports) > 0 && userConfig.Sports[0].Name != "" {
-        if err := s.db.UpdatePrimarySport(user.ID, userConfig.Sports[0].Name); err != nil {
+        if err := s.db.UpdatePrimarySport(user.ID, userConfig.Sports[0].Name, userConfig.Sports[0].ExperienceYears); err != nil {
             log.Printf("Failed to save primary sport: %v", err)
             data := s.NewSettingsData(user, userConfig)
             data.Error = fmt.Sprintf("Failed to save primary sport: %v", err)
@@ -1138,6 +1155,8 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
         IntensityPreference:       userConfig.Preferences.IntensityPreference,
         RecoveryPriority:          userConfig.Preferences.RecoveryPriority,
         PlanFrequency:             userConfig.Preferences.PlanFrequency,
+        AllowShortSessions:        userConfig.Preferences.AllowShortSessions,
+        MaxSessionsPerDay:         userConfig.Preferences.MaxSessionsPerDay,
         Notes:                     userConfig.Preferences.Notes,
     }
     if err := s.db.UpsertUserPreferences(prefs); err != nil {
@@ -1200,6 +1219,13 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
             Name:       gym.Name,
             Type:       gym.Type,
             Membership: gym.Membership,
+        }
+
+        // Parse sport_id if provided
+        if i < len(gymSportIDs) && gymSportIDs[i] != "" && gymSportIDs[i] != "0" {
+            if sportID, err := strconv.Atoi(gymSportIDs[i]); err == nil && sportID > 0 {
+                dbGym.SportID = &sportID
+            }
         }
 
         // Parse sessions limit fields if membership is "limited"
@@ -1265,6 +1291,7 @@ func (s *Server) HandleSettingsSave(w http.ResponseWriter, r *http.Request) {
                 dbSession := &db.ClubSession{
                     UserID:          user.ID,
                     GymID:           &gymIDInt,
+                    SportID:         dbGym.SportID, // Link session to same sport as gym
                     SessionName:     session.Name,
                     Description:     session.Description,
                     Occurrences:     session.Occurrences,
@@ -1358,6 +1385,7 @@ func (s *Server) HandleGeneratePlan(w http.ResponseWriter, r *http.Request) {
         for _, err := range validationErrors {
             errorMsg += "• " + err + "\n"
         }
+        log.Printf("Plan generation validation failed for user %s (ID: %d): %v", user.Name, user.ID, validationErrors)
         data := s.NewSettingsData(user, userConfig)
         data.Error = errorMsg
         s.templates.ExecuteTemplate(w, "settings.html", data)

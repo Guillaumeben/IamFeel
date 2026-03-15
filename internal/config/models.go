@@ -89,15 +89,19 @@ type UserProfile struct {
     ExperienceLevel string  `yaml:"experience_level"`
 }
 
-// UserSport represents a sport the user practices
+// UserSport represents a sport/activity the user practices
 type UserSport struct {
-    Name           string `yaml:"name"`
-    ConfigFile     string `yaml:"config_file"`
-    Primary        bool   `yaml:"primary"`
-    ExperienceYears int   `yaml:"experience_years"`
-    CurrentPhase   string `yaml:"current_phase"`
-    PhaseStartDate string `yaml:"phase_start_date"`
-    PhaseEndDate   string `yaml:"phase_end_date"`
+    Name                  string  `yaml:"name"`
+    ConfigFile            string  `yaml:"config_file"`
+    Primary               bool    `yaml:"primary"` // Deprecated: use Priority instead
+    ExperienceYears       int     `yaml:"experience_years"`
+    CurrentPhase          string  `yaml:"current_phase"`
+    PhaseStartDate        string  `yaml:"phase_start_date"`
+    PhaseEndDate          string  `yaml:"phase_end_date"`
+    GoalType              string  `yaml:"goal_type,omitempty"`               // competition_prep, maintenance, learning, recreation
+    Priority              string  `yaml:"priority,omitempty"`                // high, medium, low
+    TargetSessionsPerWeek float64 `yaml:"target_sessions_per_week,omitempty"`
+    Notes                 string  `yaml:"notes,omitempty"`
 }
 
 // EquipmentAccess describes available equipment
@@ -111,6 +115,7 @@ type Gym struct {
     Name           string         `yaml:"name"`
     Type           string         `yaml:"type"` // boxing_club, commercial_gym, CrossFit, etc.
     Membership     string         `yaml:"membership"`
+    SportID        *int           `yaml:"sport_id,omitempty"` // Link to specific activity
     SessionsLimit  *int           `yaml:"sessions_limit,omitempty"`
     LimitPeriod    *string        `yaml:"limit_period,omitempty"`
     AvailableDays  []string       `yaml:"available_days,omitempty"`
@@ -183,13 +188,15 @@ type Supplement struct {
 // UserPreferences contains training preferences
 type UserPreferences struct {
     PrimaryGoal                string   `yaml:"primary_goal,omitempty"`
-    SessionsPerWeek            int      `yaml:"sessions_per_week,omitempty"`
+    SessionsPerWeek            float64  `yaml:"sessions_per_week,omitempty"`
     PreferredDuration          int      `yaml:"preferred_duration,omitempty"`
     PreferredSessionTimes      []string `yaml:"preferred_session_times"`
     SessionDurationPreference  string   `yaml:"session_duration_preference"`
     IntensityPreference        string   `yaml:"intensity_preference"`
     RecoveryPriority           string   `yaml:"recovery_priority"`
     PlanFrequency              string   `yaml:"plan_frequency"`
+    AllowShortSessions         bool     `yaml:"allow_short_sessions"`
+    MaxSessionsPerDay          int      `yaml:"max_sessions_per_day"`
     Notes                      string   `yaml:"notes,omitempty"`
 }
 

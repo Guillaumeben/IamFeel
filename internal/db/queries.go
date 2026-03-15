@@ -428,27 +428,41 @@ func (db *DB) CreateWeeklyPlan(plan *WeeklyPlan) error {
             plan_data = excluded.plan_data,
             rationale = excluded.rationale,
             generated_at = CURRENT_TIMESTAMP
-        RETURNING id, generated_at, created_at
     `
 
-    return db.conn.QueryRow(
+    _, err := db.conn.Exec(
         query,
         plan.UserID, plan.WeekStartDate, plan.WeekEndDate,
         plan.PlanData, plan.Rationale,
-    ).Scan(&plan.ID, &plan.GeneratedAt, &plan.CreatedAt)
+    )
+    if err != nil {
+        return fmt.Errorf("failed to insert/update weekly plan: %w", err)
+    }
+
+    // Now fetch the created/updated plan to populate the ID and timestamps
+    selectQuery := `
+        SELECT id, generated_at, created_at
+        FROM weekly_plans
+        WHERE user_id = ? AND week_start_date = ?
+    `
+    return db.conn.QueryRow(selectQuery, plan.UserID, plan.WeekStartDate).
+        Scan(&plan.ID, &plan.GeneratedAt, &plan.CreatedAt)
 }
 
 // GetWeeklyPlan retrieves a weekly plan for a specific week
 func (db *DB) GetWeeklyPlan(userID int, weekStart time.Time) (*WeeklyPlan, error) {
+    // Format the date as YYYY-MM-DD for comparison
+    weekStartStr := weekStart.Format("2006-01-02")
+
     query := `
         SELECT id, user_id, week_start_date, week_end_date, plan_data, rationale,
                generated_at, created_at
         FROM weekly_plans
-        WHERE user_id = ? AND week_start_date = ?
+        WHERE user_id = ? AND week_start_date LIKE ?
     `
 
     var plan WeeklyPlan
-    err := db.conn.QueryRow(query, userID, weekStart).Scan(
+    err := db.conn.QueryRow(query, userID, weekStartStr+"%").Scan(
         &plan.ID, &plan.UserID, &plan.WeekStartDate, &plan.WeekEndDate,
         &plan.PlanData, &plan.Rationale, &plan.GeneratedAt, &plan.CreatedAt,
     )
@@ -516,14 +530,86 @@ func (db *DB) GetRecentWeeklyPlans(userID int, limit int) ([]*WeeklyPlan, error)
 // CreateUserSport creates a new sport entry for a user
 func (db *DB) CreateUserSport(userID int, sportName string, isPrimary bool) error {
     configPath := fmt.Sprintf("configs/%s.yaml", sportName)
+
+    // Set defaults based on isPrimary for backwards compatibility
+    goalType := "maintenance"
+    priority := "medium"
+    if isPrimary {
+        goalType = "competition_prep"
+        priority = "high"
+    }
+
     query := `
-        INSERT INTO user_sports (user_id, sport_name, config_path, is_primary, current_phase)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO user_sports (user_id, sport_name, config_path, is_primary, current_phase,
+                                goal_type, priority, target_sessions_per_week)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `
 
-    _, err := db.conn.Exec(query, userID, sportName, configPath, isPrimary, "foundation")
+    _, err := db.conn.Exec(query, userID, sportName, configPath, isPrimary, "foundation",
+                          goalType, priority, 0)
     if err != nil {
         return fmt.Errorf("failed to create user sport: %w", err)
+    }
+
+    return nil
+}
+
+// GetActivitiesByPriority retrieves activities grouped by priority
+func (db *DB) GetActivitiesByPriority(userID int, priority string) ([]*UserSport, error) {
+    query := `
+        SELECT id, user_id, sport_name, config_path, is_primary, experience_years,
+               current_phase, phase_start_date, phase_end_date,
+               goal_type, priority, target_sessions_per_week, notes,
+               created_at, updated_at
+        FROM user_sports
+        WHERE user_id = ? AND priority = ?
+        ORDER BY sport_name ASC
+    `
+
+    rows, err := db.conn.Query(query, userID, priority)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query activities by priority: %w", err)
+    }
+    defer rows.Close()
+
+    var sports []*UserSport
+    for rows.Next() {
+        var sport UserSport
+        err := rows.Scan(
+            &sport.ID, &sport.UserID, &sport.SportName, &sport.ConfigPath,
+            &sport.IsPrimary, &sport.ExperienceYears, &sport.CurrentPhase,
+            &sport.PhaseStartDate, &sport.PhaseEndDate,
+            &sport.GoalType, &sport.Priority, &sport.TargetSessionsPerWeek, &sport.Notes,
+            &sport.CreatedAt, &sport.UpdatedAt,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("failed to scan activity: %w", err)
+        }
+        sports = append(sports, &sport)
+    }
+
+    return sports, nil
+}
+
+// UpdateUserSport updates a sport with new field values
+func (db *DB) UpdateUserSport(sport *UserSport) error {
+    query := `
+        UPDATE user_sports
+        SET sport_name = ?, config_path = ?, is_primary = ?, experience_years = ?,
+            current_phase = ?, phase_start_date = ?, phase_end_date = ?,
+            goal_type = ?, priority = ?, target_sessions_per_week = ?, notes = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `
+
+    _, err := db.conn.Exec(query,
+        sport.SportName, sport.ConfigPath, sport.IsPrimary, sport.ExperienceYears,
+        sport.CurrentPhase, sport.PhaseStartDate, sport.PhaseEndDate,
+        sport.GoalType, sport.Priority, sport.TargetSessionsPerWeek, sport.Notes,
+        sport.ID)
+
+    if err != nil {
+        return fmt.Errorf("failed to update user sport: %w", err)
     }
 
     return nil
@@ -533,10 +619,20 @@ func (db *DB) CreateUserSport(userID int, sportName string, isPrimary bool) erro
 func (db *DB) GetUserSports(userID int) ([]*UserSport, error) {
     query := `
         SELECT id, user_id, sport_name, config_path, is_primary, experience_years,
-               current_phase, phase_start_date, phase_end_date, created_at, updated_at
+               current_phase, phase_start_date, phase_end_date,
+               goal_type, priority, target_sessions_per_week, notes,
+               created_at, updated_at
         FROM user_sports
         WHERE user_id = ?
-        ORDER BY is_primary DESC, created_at ASC
+        ORDER BY
+            CASE priority
+                WHEN 'high' THEN 1
+                WHEN 'medium' THEN 2
+                WHEN 'low' THEN 3
+                ELSE 4
+            END,
+            is_primary DESC,
+            created_at ASC
     `
 
     rows, err := db.conn.Query(query, userID)
@@ -552,6 +648,7 @@ func (db *DB) GetUserSports(userID int) ([]*UserSport, error) {
             &sport.ID, &sport.UserID, &sport.SportName, &sport.ConfigPath,
             &sport.IsPrimary, &sport.ExperienceYears, &sport.CurrentPhase,
             &sport.PhaseStartDate, &sport.PhaseEndDate,
+            &sport.GoalType, &sport.Priority, &sport.TargetSessionsPerWeek, &sport.Notes,
             &sport.CreatedAt, &sport.UpdatedAt,
         )
         if err != nil {
@@ -563,13 +660,16 @@ func (db *DB) GetUserSports(userID int) ([]*UserSport, error) {
     return sports, nil
 }
 
-// GetPrimarySport retrieves the primary sport for a user
+// GetPrimarySport retrieves the primary sport for a user (or highest priority sport)
 func (db *DB) GetPrimarySport(userID int) (*UserSport, error) {
     query := `
         SELECT id, user_id, sport_name, config_path, is_primary, experience_years,
-               current_phase, phase_start_date, phase_end_date, created_at, updated_at
+               current_phase, phase_start_date, phase_end_date,
+               goal_type, priority, target_sessions_per_week, notes,
+               created_at, updated_at
         FROM user_sports
-        WHERE user_id = ? AND is_primary = 1
+        WHERE user_id = ? AND (is_primary = 1 OR priority = 'high')
+        ORDER BY is_primary DESC, priority ASC
         LIMIT 1
     `
 
@@ -578,6 +678,7 @@ func (db *DB) GetPrimarySport(userID int) (*UserSport, error) {
         &sport.ID, &sport.UserID, &sport.SportName, &sport.ConfigPath,
         &sport.IsPrimary, &sport.ExperienceYears, &sport.CurrentPhase,
         &sport.PhaseStartDate, &sport.PhaseEndDate,
+        &sport.GoalType, &sport.Priority, &sport.TargetSessionsPerWeek, &sport.Notes,
         &sport.CreatedAt, &sport.UpdatedAt,
     )
     if err != nil {

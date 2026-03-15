@@ -62,6 +62,35 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
         return nil, fmt.Errorf("failed to get user: %w", err)
     }
 
+    // Get user sports
+    sports, err := s.db.GetUserSports(userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get sports: %w", err)
+    }
+
+    // Convert sports to config format
+    configSports := []config.UserSport{}
+    for _, sport := range sports {
+        configSport := config.UserSport{
+            Name:                  sport.SportName,
+            ConfigFile:            sport.ConfigPath,
+            Primary:               sport.IsPrimary,
+            ExperienceYears:       sport.ExperienceYears,
+            CurrentPhase:          sport.CurrentPhase,
+            GoalType:              sport.GoalType,
+            Priority:              sport.Priority,
+            TargetSessionsPerWeek: sport.TargetSessionsPerWeek,
+            Notes:                 sport.Notes,
+        }
+        if sport.PhaseStartDate != nil {
+            configSport.PhaseStartDate = sport.PhaseStartDate.Format("2006-01-02")
+        }
+        if sport.PhaseEndDate != nil {
+            configSport.PhaseEndDate = sport.PhaseEndDate.Format("2006-01-02")
+        }
+        configSports = append(configSports, configSport)
+    }
+
     // Get equipment
     equipment, err := s.db.GetUserEquipment(userID)
     if err != nil {
@@ -93,24 +122,41 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
             return nil, fmt.Errorf("failed to get gym sessions: %w", err)
         }
 
-        clubSessions := []config.ClubSession{}
+        // Group sessions by name+description+duration+cost to combine multiple day/time entries
+        sessionMap := make(map[string]*config.ClubSession)
         for _, session := range sessions {
-            // Format occurrences (days & times) and duration separately
-            occurrences := fmt.Sprintf("%s %s", session.DayOfWeek, session.Time)
+            // Create key from name+description+duration+cost
             duration := fmt.Sprintf("%d min", session.DurationMinutes)
-            clubSessions = append(clubSessions, config.ClubSession{
-                Name:        session.SessionName,
-                Description: session.Description,
-                Occurrences: occurrences,
-                Duration:    duration,
-                Cost:        session.CostType,
-            })
+            key := fmt.Sprintf("%s|%s|%s|%s", session.SessionName, session.Description, duration, session.Cost)
+
+            dayTime := fmt.Sprintf("%s %s", session.DayOfWeek, session.Time)
+
+            if existing, found := sessionMap[key]; found {
+                // Append to existing occurrences
+                existing.Occurrences = existing.Occurrences + ", " + dayTime
+            } else {
+                // Create new session
+                sessionMap[key] = &config.ClubSession{
+                    Name:        session.SessionName,
+                    Description: session.Description,
+                    Occurrences: dayTime,
+                    Duration:    duration,
+                    Cost:        session.Cost,
+                }
+            }
+        }
+
+        // Convert map to slice
+        clubSessions := []config.ClubSession{}
+        for _, session := range sessionMap {
+            clubSessions = append(clubSessions, *session)
         }
 
         configGyms = append(configGyms, config.Gym{
             Name:          gym.Name,
             Type:          gym.Type,
             Membership:    gym.Membership,
+            SportID:       gym.SportID,
             SessionsLimit: gym.SessionsLimit,
             LimitPeriod:   gym.LimitPeriod,
             Sessions:      clubSessions,
@@ -184,33 +230,39 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
         IntensityPreference:       prefs.IntensityPreference,
         RecoveryPriority:          prefs.RecoveryPriority,
         PlanFrequency:             prefs.PlanFrequency,
+        AllowShortSessions:        prefs.AllowShortSessions,
+        MaxSessionsPerDay:         prefs.MaxSessionsPerDay,
         Notes:                     prefs.Notes,
     }
 
-    // Get coach settings
-    coachSettings, err := s.db.GetCoachSettings(userID)
-    if err != nil {
-        return nil, fmt.Errorf("failed to get coach settings: %w", err)
-    }
-
+    // Get coach settings with defaults
     coach := config.CoachSettings{
-        Model:             coachSettings.Model,
-        Temperature:       coachSettings.Temperature,
-        CoachingStyle:     coachSettings.CoachingStyle,
-        ExplanationDetail: coachSettings.ExplanationDetail,
+        Model:             "claude-haiku-4-5",
+        Temperature:       0.7,
+        CoachingStyle:     "motivational",
+        ExplanationDetail: "balanced",
+    }
+    coachSettings, err := s.db.GetCoachSettings(userID)
+    if err == nil && coachSettings != nil {
+        coach.Model = coachSettings.Model
+        coach.Temperature = coachSettings.Temperature
+        coach.CoachingStyle = coachSettings.CoachingStyle
+        coach.ExplanationDetail = coachSettings.ExplanationDetail
     }
 
-    // Get tracking settings
-    trackingSettings, err := s.db.GetTrackingSettings(userID)
-    if err != nil {
-        return nil, fmt.Errorf("failed to get tracking settings: %w", err)
-    }
-
+    // Get tracking settings with defaults
     tracking := config.TrackingSettings{
-        HistoryMonths:    trackingSettings.HistoryMonths,
-        TrackSupplements: trackingSettings.TrackSupplements,
-        TrackSleep:       trackingSettings.TrackSleep,
-        TrackWeight:      trackingSettings.TrackWeight,
+        HistoryMonths:    6,
+        TrackSupplements: true,
+        TrackSleep:       false,
+        TrackWeight:      false,
+    }
+    trackingSettings, err := s.db.GetTrackingSettings(userID)
+    if err == nil && trackingSettings != nil {
+        tracking.HistoryMonths = trackingSettings.HistoryMonths
+        tracking.TrackSupplements = trackingSettings.TrackSupplements
+        tracking.TrackSleep = trackingSettings.TrackSleep
+        tracking.TrackWeight = trackingSettings.TrackWeight
     }
 
     // Build complete UserConfig
@@ -220,6 +272,7 @@ func (s *Server) GetUserConfig(userID int) (*config.UserConfig, error) {
             Age:             user.Age,
             ExperienceLevel: user.ExperienceLevel,
         },
+        Sports:       configSports,
         Equipment:    equipmentAccess,
         Availability: availability,
         Goals:        configGoals,
