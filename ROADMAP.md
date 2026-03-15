@@ -60,13 +60,13 @@
 - [ ] Push notification support
 
 ### Empty States & Onboarding
-- [ ] Engaging empty states with actionable guidance
+- [x] Engaging empty states with actionable guidance
 - [ ] First-time user onboarding flow
-  - Welcome screen
-  - Quick profile setup wizard
-  - Sample plan generation
-  - Feature highlights tour
-- [ ] Contextual help throughout app
+  - [ ] Welcome screen
+  - [ ] Quick profile setup wizard
+  - [ ] Sample plan generation
+  - [ ] Feature highlights tour
+- [x] Contextual help throughout app
 - [ ] Progress indicators during onboarding
 
 ### Progress Visualization

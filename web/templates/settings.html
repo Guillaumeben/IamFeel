@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="IamFeel">
     <title>IamFeel - Settings</title>
-    <link rel="stylesheet" href="/static/style.css?v=20">
+    <link rel="stylesheet" href="/static/style.css?v=21">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <script src="/static/toast.js"></script>
@@ -328,6 +328,10 @@
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                             <input type="checkbox" id="allow_short_sessions" name="allow_short_sessions" {{if .Config.Preferences.AllowShortSessions}}checked{{end}}>
                             <span>Allow Additional Short Exercise Sessions</span>
+                            <span class="tooltip">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip-text">The AI coach can add short 10-15 minute sessions for mobility, stretching, or core work in addition to your main training sessions. These help with recovery and complement your primary training.</span>
+                            </span>
                         </label>
                         <small>Allow the coach to add short supplementary exercises (e.g., mobility work, core exercises)</small>
                     </div>
@@ -398,7 +402,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="coach_temperature">Creativity Level</label>
+                        <label for="coach_temperature">Creativity Level
+                            <span class="tooltip">
+                                <span class="help-icon">?</span>
+                                <span class="tooltip-text">Controls how varied your training plans are. Lower values (0.0-0.5) create consistent, predictable plans week-to-week. Higher values (0.6-1.0) introduce more variety and creative exercise combinations.</span>
+                            </span>
+                        </label>
                         <input type="range" id="coach_temperature" name="coach_temperature" min="0" max="1" step="0.1" value="{{.Config.Coach.Temperature}}" oninput="document.getElementById('temperature_value').textContent = this.value">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                             <small>Consistent</small>
@@ -599,8 +608,14 @@
             const container = document.getElementById('activities-list');
             if (activities.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #9ca3af;">
-                        No activities yet. Click "Add Activity" to get started.
+                    <div class="empty-state" style="max-width: 100%;">
+                        <div class="empty-state-icon">🏃</div>
+                        <h3 style="font-size: 1.25rem;">No Activities Yet</h3>
+                        <p style="margin-bottom: 1rem;">Add your first sport or activity to start building personalized training plans.</p>
+                        <div class="empty-state-hint">
+                            <strong>💡 Multiple Activities</strong>
+                            You can track multiple sports (e.g., Boxing + Running) with individual goals and priorities.
+                        </div>
                     </div>
                 `;
                 return;

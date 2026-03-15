@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="IamFeel">
     <title>IamFeel - Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css?v=20">
+    <link rel="stylesheet" href="/static/style.css?v=21">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
     <script src="/static/toast.js"></script>
@@ -36,6 +36,24 @@
                 <span class="datetime-text">{{.CurrentDateTime}}</span>
             </div>
         </div>
+
+        {{if not .Plan}}
+        <div class="info-box">
+            <div class="info-box-header">
+                <span>💡</span>
+                <span>Getting Started with IamFeel</span>
+            </div>
+            <div class="info-box-content">
+                <p>IamFeel is your AI-powered training assistant. Here's how to get started:</p>
+                <ul>
+                    <li><strong>Set up your profile:</strong> Add your activities, goals, and schedule in Settings</li>
+                    <li><strong>Generate your plan:</strong> Let the AI create a personalized weekly training plan</li>
+                    <li><strong>Track your progress:</strong> Log sessions and monitor your stats in History</li>
+                    <li><strong>Optimize over time:</strong> The AI learns from your feedback to improve future plans</li>
+                </ul>
+            </div>
+        </div>
+        {{end}}
 
         <!-- Quick Stats Summary -->
         <section class="dashboard-stats-summary">
@@ -126,9 +144,16 @@
         {{else}}
         <section class="no-plan">
             <div class="empty-state">
-                <h3>No plan for this week</h3>
-                <p>Configure your profile and generate your plan:</p>
-                <a href="/settings" class="btn btn-primary">Go to Settings</a>
+                <div class="empty-state-icon">📋</div>
+                <h3>No Training Plan Yet</h3>
+                <p>Get started by setting up your profile and generating your first personalized training plan.</p>
+                <div class="empty-state-actions">
+                    <a href="/settings" class="btn btn-primary">Set Up Profile</a>
+                </div>
+                <div class="empty-state-hint">
+                    <strong>💡 Quick Start</strong>
+                    Add your basic info, set your training goals, and let the AI create a customized weekly plan tailored to your schedule and experience level.
+                </div>
             </div>
         </section>
         {{end}}

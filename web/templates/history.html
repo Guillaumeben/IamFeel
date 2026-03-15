@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IamFeel - Training History</title>
-    <link rel="stylesheet" href="/static/style.css?v=16">
+    <link rel="stylesheet" href="/static/style.css?v=21">
 </head>
 <body class="{{.ThemeClass}}">
     <header>
@@ -144,7 +144,16 @@
             </div>
             {{else}}
             <div class="empty-state">
-                <p>No training sessions logged yet</p>
+                <div class="empty-state-icon">🏋️</div>
+                <h3>No Training Sessions Yet</h3>
+                <p>Start tracking your progress by logging your first workout or marking planned sessions as complete.</p>
+                <div class="empty-state-actions">
+                    <a href="/" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+                <div class="empty-state-hint">
+                    <strong>💡 Getting Started</strong>
+                    Complete planned workouts from your weekly plan or manually log additional training sessions from the dashboard.
+                </div>
             </div>
             {{end}}
         </section>
@@ -192,7 +201,16 @@
             </div>
             {{else}}
             <div class="empty-state">
-                <p>No rest day notes logged yet. Track your recovery from the dashboard!</p>
+                <div class="empty-state-icon">🛌</div>
+                <h3>No Rest Day Notes</h3>
+                <p>Track your recovery and wellness on rest days to help optimize your training.</p>
+                <div class="empty-state-actions">
+                    <a href="/" class="btn btn-primary">Log Rest Day</a>
+                </div>
+                <div class="empty-state-hint">
+                    <strong>💡 Why Track Rest Days?</strong>
+                    Recording wellness, soreness, and recovery activities helps identify patterns and optimize your training schedule.
+                </div>
             </div>
             {{end}}
         </section>
