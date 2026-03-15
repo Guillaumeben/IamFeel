@@ -88,9 +88,9 @@
 - [ ] Bottom navigation bar option
 
 ### Notification System
-- [ ] Toast notifications instead of page reloads
+- [x] Toast notifications instead of page reloads
 - [ ] Loading states with skeleton screens
-- [ ] Success/error feedback
+- [x] Success/error feedback
 - [ ] Workout reminders
 - [ ] Supplement timing notifications
 - [ ] Streak notifications
