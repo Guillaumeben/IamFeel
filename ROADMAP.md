@@ -52,11 +52,11 @@
 - [ ] Save confirmation toasts
 
 ### Progressive Web App (PWA)
-- [ ] Add manifest.json for installability
-- [ ] Service worker for offline support
-- [ ] Add to home screen functionality
+- [x] Add manifest.json for installability
+- [x] Service worker for offline support
+- [x] Add to home screen functionality
 - [ ] Offline data sync strategy
-- [ ] App-like navigation (no browser chrome)
+- [x] App-like navigation (no browser chrome)
 - [ ] Push notification support
 
 ### Empty States & Onboarding
