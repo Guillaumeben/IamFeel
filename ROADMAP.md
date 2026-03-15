@@ -96,6 +96,13 @@
 - [ ] Streak notifications
 - [ ] Non-intrusive notification center
 
+### User Avatars & Personalization
+- [ ] User avatar upload/selection
+- [ ] AI Coach avatar/persona representation
+- [ ] Avatar display in header/profile
+- [ ] Default avatar options (sport-themed)
+- [ ] Avatar management in settings
+
 ### Accessibility (a11y)
 - [ ] ARIA labels on interactive elements
 - [ ] Keyboard navigation support
@@ -237,6 +244,15 @@
 
 ## Technical Improvements
 
+### Authentication & Security
+- [ ] SSO integration (OAuth2/OIDC)
+- [ ] Multi-provider support (Google, Apple, GitHub)
+- [ ] Session management
+- [ ] Password reset flow
+- [ ] Email verification
+- [ ] Two-factor authentication (2FA)
+
+### Infrastructure & Code Quality
 - [ ] Add test coverage
 - [ ] API documentation
 - [ ] Rate limiting
@@ -253,7 +269,7 @@
 
 ---
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 
 ## Notes
 
